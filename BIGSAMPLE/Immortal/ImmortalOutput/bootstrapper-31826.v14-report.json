@@ -1,0 +1,56 @@
+{
+  "bootstrap_executed": false,
+  "errors": [
+    "v14.7 static section decode: expected one length-framed three-section string; found 0"
+  ],
+  "family": "Luraph",
+  "input_bytes": 252808,
+  "input_name": "bootstrapper-31826.lua",
+  "input_sha256": "aca653d2f06bd5263b4b123f17e09ae909a737334a128738c6329a40f8cfa6fd",
+  "loader_layout": {
+    "detected": true,
+    "layout": "two-stream-legacy",
+    "legacy_signature": true,
+    "long_strings": 2,
+    "raw_lph_streams": 2,
+    "single_stream_externalizable": null,
+    "valid_lph_streams": 2,
+    "zstd_streams": 0
+  },
+  "lph_literals_found": 2,
+  "protected_payload_executed": false,
+  "remote_service_used": false,
+  "source_equivalence_verified": false,
+  "static_sections": [],
+  "static_streams": [
+    {
+      "artifact": "stream-01.bin",
+      "decoded_bytes": 20672,
+      "decoder": "legacy-lph-ascii85",
+      "encoded_characters": 25844,
+      "index": 1,
+      "kind": "decoded LPH stream; VM not devirtualized",
+      "sha256": "ec9a88e467f9e044ebd24456febec3345793af80617f860c8e31e1066c3dc903",
+      "source_offset": 899
+    },
+    {
+      "artifact": "stream-02.bin",
+      "decoded_bytes": 178732,
+      "decoder": "legacy-lph-ascii85",
+      "encoded_characters": 223419,
+      "index": 2,
+      "kind": "decoded LPH stream; VM not devirtualized",
+      "sha256": "951905b4b3a64ce606e352f9d75de3e98bc0da92f36120a5b49d824836fcf7a3",
+      "source_offset": 26753
+    }
+  ],
+  "static_unpack": {
+    "bytecode_bytes": 323909,
+    "bytecode_sha256": "637b221fc7ec120f0891169a052f51070d76f2432fc751c1b0603f732b309594",
+    "interpreter_bytes": 75013,
+    "interpreter_sha256": "6992ac6dd9132a1adb51819e83d816a5a9bbb4079e17d15c3b588313df9e248a",
+    "protected_payload_executed": false
+  },
+  "status": "static VM loader unpack completed; bytecode was not lifted to source",
+  "version": "14.7"
+}

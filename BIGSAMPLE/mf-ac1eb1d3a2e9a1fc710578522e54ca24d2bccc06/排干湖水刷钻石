@@ -1,0 +1,74 @@
+local urlHall = "https://raw.githubusercontent.com/kongbai2-script/mf/refs/heads/main/%E6%8E%92%E5%B9%B2%E6%B9%96%E6%B0%B4%E5%A4%A7%E5%8E%85"
+
+local function hasPortal()
+    for _, child in ipairs(workspace:GetChildren()) do
+        if child:IsA("Model") and string.find(child.Name:lower(), "portal") then
+            return true
+        end
+    end
+    return false
+end
+
+local q = queue_on_teleport
+if not q then return end
+
+if hasPortal() then
+    loadstring(game:HttpGet(urlHall))()
+else
+    task.wait(5)
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    if not player then
+        Players.PlayerAdded:Wait()
+        player = Players.LocalPlayer
+    end
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    if getgc then
+        local pattern = "%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x"
+        for _, obj in ipairs(getgc(true)) do
+            if type(obj) == "string" and string.match(obj, pattern) then
+                pcall(function()
+                    game:GetService("ReplicatedStorage").VerdantRemotes.VDT_CutsceneVoteSkip:FireServer(obj)
+                end)
+                break
+            end
+            if type(obj) == "table" then
+                pcall(function()
+                    for _, v in pairs(obj) do
+                        if type(v) == "string" and string.match(v, pattern) then
+                            game:GetService("ReplicatedStorage").VerdantRemotes.VDT_CutsceneVoteSkip:FireServer(v)
+                            return
+                        end
+                    end
+                end)
+            end
+        end
+    end
+
+    local EventChest = game:GetService("ReplicatedStorage").VerdantRemotes["VDT_Chest.Open"]
+    for _, chest in ipairs(workspace:GetDescendants()) do
+        if string.find(chest.Name, "Chest", 1, true) and chest:IsA("Model") then
+            local part = chest:FindFirstChild("Part")
+            if part and part:IsA("BasePart") then
+                local startTime = tick()
+                while tick() - startTime < 0.5 do
+                    hrp.CFrame = CFrame.new(part.Position + Vector3.new(0, 2, 0))
+                    pcall(function() EventChest:FireServer(part) end)
+                    task.wait()
+                end
+            end
+        end
+    end
+
+    task.wait(1)
+    if not _G.teleported_once then
+        _G.teleported_once = true
+        game:GetService("TeleportService"):Teleport(138381251771774)
+    end
+end
+
+game:GetService("Players").LocalPlayer.OnTeleport:Connect(function()
+    q("loadstring(game:HttpGet('" .. urlHall .. "'))()")
+end)

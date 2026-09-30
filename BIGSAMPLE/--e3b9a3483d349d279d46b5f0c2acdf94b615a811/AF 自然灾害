@@ -1,0 +1,754 @@
+local repo = 'https://raw.githubusercontent.com/KingScriptAE/No-sirve-nada./refs/heads/main/'
+local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
+local ThemeManager = loadstring(game:HttpGet(repo .. 'addons/ThemeManager.lua'))()
+local SaveManager = loadstring(game:HttpGet(repo .. 'addons/SaveManager.lua'))()
+local Options = Library.Options
+local Toggles = Library.Toggles
+local A1 = game:GetService("Players")
+local A2 = A1.LocalPlayer
+local A3 = game:GetService("RunService")
+local A4 = game:GetService("Lighting")
+local A5 = game:GetService("CoreGui")
+local A6 = game:GetService("UserInputService")
+local A7 = game:GetService("TeleportService")
+local A8 = workspace
+local A9 = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextChatService = game:GetService("TextChatService")
+local Lighting = game:GetService("Lighting")
+local TweenServiceBlur = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local ServerPlayerCount = 0
+_G.autowinfarm = false
+_G.NoClip = nil
+_G.FallProtect = nil
+_G.BackgroundImage = "rbxassetid://136059273188532"
+local function UpdatePlayerCount()
+    ServerPlayerCount = #Players:GetPlayers()
+end
+Players.PlayerAdded:Connect(UpdatePlayerCount)
+Players.PlayerRemoving:Connect(UpdatePlayerCount)
+UpdatePlayerCount()
+
+local Window = Library:CreateWindow({
+    Title = 'AF Hub丨自然灾害',
+    Footer = "@秋辞",
+    Icon = 122936242690381,
+    NotifySide = "Right",
+    ShowCustomCursor = true,
+})
+
+local Tabs = {
+    Main = Window:AddTab("主功能", "home"),
+    Settings = Window:AddTab("设置", "settings"),
+}
+
+local LeftGroup = Tabs.Main:AddLeftGroupbox("服务器信息 & 基础功能")
+local timeLabel = LeftGroup:AddLabel("当前时间: " .. os.date("%Y-%m-%d %H:%M:%S"))
+task.spawn(function()
+    while true do
+        timeLabel:SetText("当前时间: " .. os.date("%Y-%m-%d %H:%M:%S"))
+        task.wait(1)
+    end
+end)
+local playerCountLabel = LeftGroup:AddLabel("服务器人数: " .. tostring(ServerPlayerCount))
+task.spawn(function()
+    while true do
+        playerCountLabel:SetText("服务器人数: " .. tostring(ServerPlayerCount))
+        task.wait(1)
+    end
+end)
+local disasterLabel = LeftGroup:AddLabel("当前灾难: 无")
+LeftGroup:AddToggle('DisasterDisplay', {
+    Text = '预测灾害显示',
+    Default = false,
+    Tooltip = '显示当前灾害名称',
+    Callback = function(Value)
+        task.spawn(function()
+            while Value do
+                local model = workspace:FindFirstChild(LocalPlayer.DisplayName)
+                local tag = model and model:FindFirstChild("SurvivalTag")
+                if tag then
+                    disasterLabel:SetText("当前灾难: " .. tag.Value)
+                else
+                    disasterLabel:SetText("当前灾难: 无")
+                end
+                task.wait(1)
+            end
+        end)
+    end
+})
+
+LeftGroup:AddDivider()
+
+LeftGroup:AddToggle('AutoWinFarm', {
+    Text = '自动存活',
+    Default = false,
+    Tooltip = '自动传送到安全位置',
+    Callback = function(Value)
+        _G.autowinfarm = Value
+        task.spawn(function()
+            while _G.autowinfarm do
+                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    hrp.CFrame = CFrame.new(-236, 180, 360)
+                end
+                task.wait(0.1)
+            end
+        end)
+    end
+})
+
+LeftGroup:AddToggle('NoClip', {
+    Text = '防穿飞',
+    Default = false,
+    Tooltip = '穿过所有物体',
+    Callback = function(Value)
+        if Value then
+            _G.NoClip = RunService.Stepped:Connect(function()
+                local char = LocalPlayer.Character
+                if char then
+                    for _, v in ipairs(char:GetDescendants()) do
+                        if v:IsA("BasePart") then
+                            v.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        else
+            if _G.NoClip then
+                _G.NoClip:Disconnect()
+                _G.NoClip = nil
+            end
+        end
+    end
+})
+
+LeftGroup:AddToggle('FallProtect', {
+    Text = '刹除跌落伤害',
+    Default = false,
+    Tooltip = '防止摔落伤害',
+    Callback = function(Value)
+        if Value then
+            _G.FallProtect = RunService.Heartbeat:Connect(function()
+                local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                end
+            end)
+        else
+            if _G.FallProtect then
+                _G.FallProtect:Disconnect()
+                _G.FallProtect = nil
+            end
+        end
+    end
+})
+
+LeftGroup:AddDivider()
+LeftGroup:AddSlider("WalkSpeedSlider", {Text="移动速度(可在墨水使用)",Default=16,Min=16,Max=200,Rounding=0,Compact=false,Callback=function(Value)
+        if (A2 and A2.Character) then
+                local Humanoid = A2.Character:FindFirstChild("Humanoid");
+                if Humanoid then
+                        Humanoid.WalkSpeed = Value;
+                end
+        end
+end});
+LeftGroup:AddInput("WalkSpeedInput", {Text="移动速度设置",Default="",Placeholder="输入移动速度值",Numeric=true,Finished=false,Callback=function(Value)
+        local numValue = tonumber(Value);
+        if (numValue and A2 and A2.Character) then
+                local Humanoid = A2.Character:FindFirstChild("Humanoid");
+                if Humanoid then
+                        Humanoid.WalkSpeed = numValue;
+                end
+        end
+end});
+LeftGroup:AddButton({Text="无限跳",Func=function()
+        A20 = not A20;
+        if A25 then
+                A25:Disconnect();
+                A25 = nil;
+        end
+        if A20 then
+                A25 = A6.JumpRequest:Connect(function()
+                        if A2.Character then
+                                local Humanoid = A2.Character:FindFirstChildOfClass("Humanoid");
+                                if Humanoid then
+                                        Humanoid:ChangeState("Jumping");
+                                end
+                        end
+                end);
+        end
+end});
+local FlyingEnabled = false
+local SpinningEnabled = false
+local FlightSpeed = 50
+local SpinSpeed = 5
+
+local CurrentAO, CurrentLV, CurrentMoverAttachment
+local FlightConnection
+local Control = {F = 0, B = 0, L = 0, R = 0, Q = 0, E = 0}
+
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local function getControlModule()
+    local PlayerModule = LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule")
+    return require(PlayerModule:WaitForChild("ControlModule"))
+end
+
+local function setupBodyMovers(character)
+    local hrp = character:WaitForChild("HumanoidRootPart")
+    local humanoid = character:WaitForChild("Humanoid")
+    local moverParent = workspace:FindFirstChildOfClass("Terrain") or workspace
+
+    local moverAttachment = Instance.new("Attachment", hrp)
+    moverAttachment.Name = "FlightAttachment"
+
+    local alignOrientation = Instance.new("AlignOrientation")
+    alignOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment
+    alignOrientation.RigidityEnabled = true
+    alignOrientation.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    alignOrientation.CFrame = hrp.CFrame
+    alignOrientation.Attachment0 = moverAttachment
+    alignOrientation.Parent = moverParent
+
+    local linearVelocity = Instance.new("LinearVelocity")
+    linearVelocity.VectorVelocity = Vector3.zero
+    linearVelocity.MaxForce = 9e9
+    linearVelocity.Attachment0 = moverAttachment
+    linearVelocity.Parent = moverParent
+
+    return alignOrientation, linearVelocity, humanoid, moverAttachment
+end
+
+local function getFlightVector(controlModule)
+    local moveVector = controlModule:GetMoveVector()
+
+    Control.F = -moveVector.Z
+    Control.B = moveVector.Z
+    Control.L = -moveVector.X
+    Control.R = moveVector.X
+    Control.Q = moveVector.Y
+    Control.E = -moveVector.Y
+
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then Control.F = 1 end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then Control.B = 1 end
+    if UserInputService:IsKeyDown(Enum.KeyCode.A) then Control.L = 1 end
+    if UserInputService:IsKeyDown(Enum.KeyCode.D) then Control.R = 1 end
+    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then Control.Q = 1 end
+    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then Control.E = 1 end
+
+    local flightVector =
+        Camera.CFrame.LookVector * (Control.F - Control.B) +
+        Camera.CFrame.RightVector * (Control.R - Control.L) +
+        Vector3.new(0, 1, 0) * (Control.Q - Control.E)
+
+    return flightVector.Magnitude > 0 and flightVector.Unit or flightVector
+end
+
+local function startFlying()
+    if FlyingEnabled then return end
+
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    if not character then return end
+
+    FlyingEnabled = true
+    SpinningEnabled = false
+
+    if CurrentAO then CurrentAO:Destroy() end
+    if CurrentLV then CurrentLV:Destroy() end
+    if CurrentMoverAttachment then CurrentMoverAttachment:Destroy() end
+
+    CurrentAO, CurrentLV, humanoid, CurrentMoverAttachment = setupBodyMovers(character)
+
+    local controlModule = getControlModule()
+
+    FlightConnection = RunService.Heartbeat:Connect(function()
+        if not FlyingEnabled or not CurrentLV or not CurrentAO then return end
+
+        local flightVector = getFlightVector(controlModule)
+
+        if flightVector.Magnitude > 0 then
+            CurrentLV.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+            CurrentLV.VectorVelocity = flightVector * FlightSpeed
+        else
+            CurrentLV.VectorVelocity = Vector3.zero
+        end
+
+        if SpinningEnabled then
+            local targetPart = humanoid.SeatPart or character.HumanoidRootPart
+            CurrentAO.CFrame = targetPart.CFrame * CFrame.Angles(0, math.rad(SpinSpeed), 0)
+        else
+            CurrentAO.CFrame = Camera.CFrame
+        end
+
+        humanoid.PlatformStand = true
+    end)
+
+    character.AncestryChanged:Connect(function(_, parent)
+        if not parent and FlyingEnabled then
+            stopFlying()
+        end
+    end)
+end
+
+local function stopFlying()
+    if not FlyingEnabled then return end
+
+    FlyingEnabled = false
+    SpinningEnabled = false
+
+    if FlightConnection then
+        FlightConnection:Disconnect()
+        FlightConnection = nil
+    end
+
+    if CurrentAO then CurrentAO:Destroy() end
+    if CurrentLV then CurrentLV:Destroy() end
+    if CurrentMoverAttachment then CurrentMoverAttachment:Destroy() end
+
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Humanoid") then
+        character.Humanoid.PlatformStand = false
+    end
+end
+
+LeftGroup:AddToggle('MyToggle', {
+    Text = '飞行模式(能在墨水使用可能会被反作弊击杀)',
+    Default = false,
+    Tooltip = '开启 / 关闭飞行功能',
+    Callback = function(Value)
+        if Value then
+            startFlying()
+        else
+            stopFlying()
+        end
+    end
+})
+LeftGroup:AddSlider('MyIntSlider', {
+    Text = '飞行速度',
+    Default = 50,
+    Min = 1,
+    Max = 200,
+    Rounding = 0,
+    Suffix = '',
+    Compact = false,
+    Callback = function(Value)
+        FlightSpeed = Value
+    end
+})
+LeftGroup:AddSlider('UltraWideSlider', {
+    Text = "超广角设置(可在墨水使用)",
+    Default = 70,
+    Min = 20,
+    Max = 120,
+    Rounding = 0,
+    Suffix = "°",
+    Compact = false,
+
+    Callback = function(Value)
+        local fov = tonumber(Value)
+        if fov then
+            CurrentCamera.FieldOfView = fov
+        end
+    end
+})
+LeftGroup:AddCheckbox("ESP", {
+    Text = "透视[墨水可用]",
+    Default = false,
+    Callback = function(enabled)
+        local Players = game:GetService("Players")
+        local RunService = game:GetService("RunService")
+
+        local highlights = {}
+        local connections = {}
+
+        local function clearHighlights()
+            for _, plr in pairs(Players:GetPlayers()) do
+                if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                    local hl = plr.Character.HumanoidRootPart:FindFirstChild("Highlight")
+                    if hl then
+                        hl:Destroy()
+                    end
+                end
+            end
+            for _, conn in pairs(connections) do
+                if typeof(conn) == "RBXScriptConnection" then
+                    conn:Disconnect()
+                end
+            end
+            table.clear(highlights)
+            table.clear(connections)
+        end
+
+        if enabled then
+            for _, plr in pairs(Players:GetPlayers()) do
+                task.spawn(function()
+                    repeat task.wait() until plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                    if not plr.Character.HumanoidRootPart:FindFirstChild("Highlight") then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = "Highlight"
+                        highlight.Adornee = plr.Character
+                        highlight.Parent = plr.Character.HumanoidRootPart
+                        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        highlights[plr] = highlight
+                    end
+                end)
+            end
+
+            connections["PlayerAdded"] = Players.PlayerAdded:Connect(function(plr)
+                task.spawn(function()
+                    repeat task.wait() until plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                    if not plr.Character.HumanoidRootPart:FindFirstChild("Highlight") then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Name = "Highlight"
+                        highlight.Adornee = plr.Character
+                        highlight.Parent = plr.Character.HumanoidRootPart
+                        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+                        highlights[plr] = highlight
+                    end
+                end)
+            end)
+
+            connections["PlayerRemoving"] = Players.PlayerRemoving:Connect(function(plr)
+                if highlights[plr] then
+                    highlights[plr]:Destroy()
+                    highlights[plr] = nil
+                end
+            end)
+
+        else
+            clearHighlights()
+        end
+    end
+})
+LeftGroup:AddToggle('AntiFlingToggle', {
+    Text = '防甩飞(可在墨水使用)',
+    Default = false,
+    Tooltip = '开启后防止玩家被甩飞',
+
+    Callback = function(state)
+        if state then
+            local Players = game:GetService("Players")
+            local RunService = game:GetService("RunService")
+            local LocalPlayer = Players.LocalPlayer
+
+            local ANTI_FLING_FORCE = 1e6
+            local UPDATE_RATE = 0.01
+
+            _G.ActiveHandles = {
+                Connections = {},
+                Constraints = {},
+                Alignments = {}
+            }
+
+            local function CreateSuperConstraint(part)
+                local bodyPos = Instance.new("BodyPosition")
+                bodyPos.P = ANTI_FLING_FORCE
+                bodyPos.D = ANTI_FLING_FORCE / 10
+                bodyPos.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                bodyPos.Position = part.Position
+                bodyPos.Parent = part
+
+                local bodyGyro = Instance.new("BodyGyro")
+                bodyGyro.P = ANTI_FLING_FORCE
+                bodyGyro.D = ANTI_FLING_FORCE / 10
+                bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                bodyGyro.CFrame = part.CFrame
+                bodyGyro.Parent = part
+
+                local alignPos = Instance.new("AlignPosition")
+                alignPos.RigidityEnabled = true
+                alignPos.MaxForce = ANTI_FLING_FORCE
+                alignPos.Responsiveness = ANTI_FLING_FORCE
+                alignPos.Parent = part
+
+                local alignOri = Instance.new("AlignOrientation")
+                alignOri.RigidityEnabled = true
+                alignOri.MaxTorque = ANTI_FLING_FORCE
+                alignOri.Responsiveness = ANTI_FLING_FORCE
+                alignOri.Parent = part
+
+                table.insert(_G.ActiveHandles.Constraints, bodyPos)
+                table.insert(_G.ActiveHandles.Constraints, bodyGyro)
+                table.insert(_G.ActiveHandles.Alignments, alignPos)
+                table.insert(_G.ActiveHandles.Alignments, alignOri)
+
+                return bodyPos, bodyGyro, alignPos, alignOri
+            end
+
+            local function ApplyUltimateProtection(character)
+                if not character then return end
+
+                local rootPart = character:FindFirstChild("HumanoidRootPart")
+                    or character:FindFirstChild("Torso")
+
+                if not rootPart then return end
+
+                local bodyPos, bodyGyro, alignPos, alignOri =
+                    CreateSuperConstraint(rootPart)
+
+                local updateConn = RunService.Heartbeat:Connect(function()
+                    if not character:IsDescendantOf(workspace) then return end
+
+                    bodyPos.Position = rootPart.Position
+                    bodyGyro.CFrame = rootPart.CFrame
+
+                    for _, part in ipairs(character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                            part.CustomPhysicalProperties =
+                                PhysicalProperties.new(0, 0, 0)
+                            part.AssemblyAngularVelocity = Vector3.new()
+                            part.AssemblyLinearVelocity = Vector3.new()
+                            part.Velocity = Vector3.new()
+                            part.RotVelocity = Vector3.new()
+                            part:SetAttribute("LastPosition", part.Position)
+                        end
+                    end
+                end)
+
+                table.insert(_G.ActiveHandles.Connections, updateConn)
+
+                local velConn =
+                    rootPart:GetPropertyChangedSignal("AssemblyLinearVelocity")
+                        :Connect(function()
+                            rootPart.AssemblyLinearVelocity = Vector3.new()
+                            rootPart.Velocity = Vector3.new()
+                        end)
+
+                table.insert(_G.ActiveHandles.Connections, velConn)
+
+                local rotConn =
+                    rootPart:GetPropertyChangedSignal("AssemblyAngularVelocity")
+                        :Connect(function()
+                            rootPart.AssemblyAngularVelocity = Vector3.new()
+                            rootPart.RotVelocity = Vector3.new()
+                        end)
+
+                table.insert(_G.ActiveHandles.Connections, rotConn)
+
+                local posCheck = RunService.Heartbeat:Connect(function()
+                    if not character:IsDescendantOf(workspace) then return end
+
+                    local lastPos = rootPart:GetAttribute("LastPosition")
+                    if lastPos then
+                        local dist =
+                            (rootPart.Position - lastPos).Magnitude
+                        if dist > 5 then
+                            rootPart.CFrame = CFrame.new(lastPos)
+                        end
+                    end
+                    rootPart:SetAttribute("LastPosition", rootPart.Position)
+                end)
+
+                table.insert(_G.ActiveHandles.Connections, posCheck)
+            end
+
+            local function MonitorPlayer(player)
+                if player == LocalPlayer then return end
+
+                local function HandleCharacter(character)
+                    if not character then return end
+                    repeat task.wait() until
+                        character:FindFirstChild("HumanoidRootPart")
+                        or character:FindFirstChild("Torso")
+
+                    ApplyUltimateProtection(character)
+                end
+
+                if player.Character then
+                    HandleCharacter(player.Character)
+                end
+
+                local charConn =
+                    player.CharacterAdded:Connect(HandleCharacter)
+                table.insert(_G.ActiveHandles.Connections, charConn)
+            end
+
+            for _, player in ipairs(Players:GetPlayers()) do
+                MonitorPlayer(player)
+            end
+
+            local playerConn =
+                Players.PlayerAdded:Connect(MonitorPlayer)
+            table.insert(_G.ActiveHandles.Connections, playerConn)
+
+        else
+            for _, conn in ipairs(_G.ActiveHandles.Connections or {}) do
+                if conn.Connected then
+                    conn:Disconnect()
+                end
+            end
+
+            for _, constraint in ipairs(
+                _G.ActiveHandles.Constraints or {}
+            ) do
+                if constraint and constraint.Parent then
+                    constraint:Destroy()
+                end
+            end
+
+            for _, align in ipairs(
+                _G.ActiveHandles.Alignments or {}
+            ) do
+                if align and align.Parent then
+                    align:Destroy()
+                end
+            end
+
+            for _, player in ipairs(
+                game:GetService("Players"):GetPlayers()
+            ) do
+                if player ~= LocalPlayer and player.Character then
+                    for _, part in ipairs(
+                        player.Character:GetDescendants()
+                    ) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = true
+                            part.CustomPhysicalProperties = nil
+                            part.AssemblyAngularVelocity = Vector3.new()
+                            part.AssemblyLinearVelocity = Vector3.new()
+                            part:SetAttribute("LastPosition", nil)
+                        end
+                    end
+                end
+            end
+
+            _G.ActiveHandles = {
+                Connections = {},
+                Constraints = {},
+                Alignments = {}
+            }
+        end
+    end
+})
+
+local RightGroup = Tabs.Main:AddRightGroupbox("传送 & 脚本")
+
+RightGroup:AddButton({
+    Text = "传送到地图",
+    Func = function()
+        LocalPlayer.Character:PivotTo(CFrame.new(-115.828506, 65.4863434, 18.8461514))
+        Library:Notify("已传送到地图", 2)
+    end,
+})
+
+RightGroup:AddButton({
+    Text = "传送到游戏岛",
+    Func = function()
+        LocalPlayer.Character:PivotTo(CFrame.new(-83.5, 38.5, -27.5))
+        Library:Notify("已传送到游戏岛", 2)
+    end,
+})
+
+RightGroup:AddDivider()
+
+RightGroup:AddLabel("=== 黑洞脚本 ===")
+RightGroup:AddButton({
+    Text = "皮-黑洞脚本",
+    Func = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/xiaopi77/xiaopi77/refs/heads/main/%F0%9F%98%A1%F0%9F%98%A1%F0%9F%98%A1blackhole.lua"))()
+        Library:Notify("正在加载黑洞脚本...", 3)
+    end,
+})
+
+RightGroup:AddButton({
+    Text = "点击即跟随型黑洞",
+    Func = function()
+        loadstring(game:HttpGet("https://pastefy.app/BbXuvVkK/raw", true))()
+        Library:Notify("正在加载跟随黑洞...", 3)
+    end,
+})
+
+RightGroup:AddDivider()
+
+RightGroup:AddLabel("=== 角色脚本 ===")
+RightGroup:AddButton({
+    Text = "史蒂夫建造",
+    Func = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/ian49972/SCRIPTS/refs/heads/main/Steve"))()
+        Library:Notify("正在加载史蒂夫建造", 3)
+    end,
+})
+RightGroup:AddButton({
+    Text = "火车头脚本",
+    Func = function()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/giobolqv1/A-Train-by-GioBolqv1-/refs/heads/main/train.lua"))()
+        Library:Notify("正在加载火车头...", 3)
+    end,
+})
+RightGroup:AddButton({
+    Text = "隐身脚本",
+    Func = function()
+    loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-Invisible-script-20557"))()
+        Library:Notify("正在加隐身...", 3)
+    end,
+})
+RightGroup:AddButton({
+    Text = "全能侠脚本",
+    Func = function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/giobolqvi1/Omni-man-fly-by-GioBolqv1/refs/heads/main/omniman.lua"))()
+        Library:Notify("正在加载全能侠...", 3)
+    end,
+})
+RightGroup:AddDivider()
+
+RightGroup:AddLabel("=== 其他脚本 ===")
+RightGroup:AddButton({
+    Text = "加载指令脚本",
+    Func = function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source", true))()
+        Library:Notify("正在加载指令脚本...", 3)
+    end,
+})
+
+RightGroup:AddDivider()
+
+RightGroup:AddButton({
+    Text = "复制主群 (938714427)",
+    Func = function()
+        setclipboard("938714427")
+        Library:Notify("已复制QQ群号！", 3)
+    end,
+})
+
+RightGroup:AddDivider()
+
+RightGroup:AddLabel("作者: 秋辞")
+
+local MenuGroup = Tabs.Settings:AddLeftGroupbox('菜单设置')
+local ThemeGroup = Tabs.Settings:AddRightGroupbox('主题设置')
+
+MenuGroup:AddButton('卸载脚本', function()
+    Library:Unload()
+end)
+
+-- 菜单快捷键
+MenuGroup:AddLabel('菜单快捷键'):AddKeyPicker('MenuKeybind', {
+    Default = 'RightShift',
+    NoUI = true,
+    Text = '菜单快捷键'
+})
+
+Library.ToggleKeybind = Options.MenuKeybind
+
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+ThemeManager:SetFolder("AFHubTheme")
+SaveManager:SetFolder("AFHubConfig")
+SaveManager:BuildConfigSection(Tabs.Settings)
+ThemeManager:ApplyToTab(Tabs.Settings)
+Library:Notify("AF Hub 已加载！", 3)

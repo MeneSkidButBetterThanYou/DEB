@@ -1,0 +1,2496 @@
+--[[
+ .____                  ________ ___.    _____                           __                
+ |    |    __ _______   \_____  \\_ |___/ ____\_ __  ______ ____ _____ _/  |_  ___________ 
+ |    |   |  |  \__  \   /   |   \| __ \   __\  |  \/  ___// ___\\__  \\   __\/  _ \_  __ \
+ |    |___|  |  // __ \_/    |    \ \_\ \  | |  |  /\___ \\  \___ / __ \|  | (  <_> )  | \/
+ |_______ \____/(____  /\_______  /___  /__| |____//____  >\___  >____  /__|  \____/|__|   
+         \/          \/         \/    \/                \/     \/     \/                   
+          \_Welcome to LuaObfuscator.com   (Alpha 0.10.9) ~  Much Love, Ferib 
+
+]]--
+
+local repo = "https://raw.githubusercontent.com/ATLASTEAM01/Obsidian/main/";
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))();
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))();
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))();
+local Options = Library.Options;
+local Toggles = Library.Toggles;
+local Window = Library:CreateWindow({Title="秋辞通缉脚本（虽然功能全是盗的）",Footer="1.3",Center=true,AutoShow=true});
+local Tabs = {Main=Window:AddTab("主页", "user"),["UI Settings"]=Window:AddTab("UI设置", "settings")};
+local MainSettingsBox = Tabs.Main:AddLeftGroupbox("主设置");
+MainSettingsBox:AddToggle("EnabledToggle", {Text="（举例）",Default=false}):AddKeyPicker("EnabledKeybind", {Default="RightAlt",SyncToggleState=true,Mode="Toggle"});
+Toggles.EnabledToggle:OnChanged(function(Value)
+end);
+local FlightControl = Tabs.Main:AddLeftGroupbox("人物功能");
+local FlyingEnabled = false;
+local SpinningEnabled = false;
+local FlightSpeed = 50;
+local SpinSpeed = 5;
+local CurrentAO, CurrentLV, CurrentMoverAttachment;
+local FlightConnection;
+local Control = {F=0,B=0,L=0,R=0,Q=0,E=0};
+local LastControl = {F=0,B=0,L=0,R=0,Q=0,E=0};
+local function getControlModule()
+	local FlatIdent_8D327 = 0;
+	local LocalPlayer;
+	local PlayerModule;
+	while true do
+		if (FlatIdent_8D327 == 0) then
+			LocalPlayer = game:GetService("Players").LocalPlayer;
+			PlayerModule = LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule");
+			FlatIdent_8D327 = 1;
+		end
+		if (FlatIdent_8D327 == 1) then
+			return require(PlayerModule:WaitForChild("ControlModule"));
+		end
+	end
+end
+local function setupBodyMovers(character)
+	local FlatIdent_67C40 = 0;
+	local hrp;
+	local humanoid;
+	local moverParent;
+	local moverAttachment;
+	local alignOrientation;
+	local linearVelocity;
+	while true do
+		if (FlatIdent_67C40 == 3) then
+			linearVelocity = Instance.new("LinearVelocity");
+			linearVelocity.VectorVelocity = Vector3.new(0, 0, 0);
+			linearVelocity.MaxForce = 8999999488;
+			linearVelocity.Attachment0 = moverAttachment;
+			FlatIdent_67C40 = 4;
+		end
+		if (FlatIdent_67C40 == 4) then
+			linearVelocity.Parent = moverParent;
+			return alignOrientation, linearVelocity, humanoid, moverAttachment;
+		end
+		if (FlatIdent_67C40 == 1) then
+			moverAttachment.Name = "FlightAttachment";
+			alignOrientation = Instance.new("AlignOrientation");
+			alignOrientation.Mode = Enum.OrientationAlignmentMode.OneAttachment;
+			alignOrientation.RigidityEnabled = true;
+			FlatIdent_67C40 = 2;
+		end
+		if (FlatIdent_67C40 == 0) then
+			hrp = character:WaitForChild("HumanoidRootPart");
+			humanoid = character:WaitForChild("Humanoid");
+			moverParent = workspace:FindFirstChildOfClass("Terrain") or workspace;
+			moverAttachment = Instance.new("Attachment", hrp);
+			FlatIdent_67C40 = 1;
+		end
+		if (FlatIdent_67C40 == 2) then
+			alignOrientation.MaxTorque = Vector3.new(8999999488, 8999999488, 8999999488);
+			alignOrientation.CFrame = hrp.CFrame;
+			alignOrientation.Attachment0 = moverAttachment;
+			alignOrientation.Parent = moverParent;
+			FlatIdent_67C40 = 3;
+		end
+	end
+end
+local function getFlightVector(controlModule)
+	local moveVector = controlModule:GetMoveVector();
+	local camera = workspace.CurrentCamera;
+	Control.F = -moveVector.Z;
+	Control.B = moveVector.Z;
+	Control.L = -moveVector.X;
+	Control.R = moveVector.X;
+	Control.Q = moveVector.Y;
+	Control.E = -moveVector.Y;
+	local UserInputService = game:GetService("UserInputService");
+	if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+		Control.F = 1;
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+		Control.B = 1;
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+		Control.L = 1;
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+		Control.R = 1;
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+		Control.Q = 1;
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+		Control.E = 1;
+	end
+	local flightVector = (camera.CFrame.LookVector * (Control.F - Control.B)) + (camera.CFrame.RightVector * (Control.R - Control.L)) + (Vector3.new(0, 1, 0) * (Control.Q - Control.E));
+	return ((flightVector.Magnitude > 0) and flightVector.Unit) or flightVector;
+end
+local function startFlying()
+	local FlatIdent_39B0 = 0;
+	local LocalPlayer;
+	local character;
+	local controlModule;
+	while true do
+		if (FlatIdent_39B0 == 1) then
+			FlyingEnabled = true;
+			SpinningEnabled = false;
+			if CurrentAO then
+				CurrentAO:Destroy();
+			end
+			if CurrentLV then
+				CurrentLV:Destroy();
+			end
+			FlatIdent_39B0 = 2;
+		end
+		if (3 == FlatIdent_39B0) then
+			FlightConnection = game:GetService("RunService").Heartbeat:Connect(function()
+				local FlatIdent_7FAC9 = 0;
+				local flightVector;
+				while true do
+					if (FlatIdent_7FAC9 == 1) then
+						if (flightVector.Magnitude > 0) then
+							local FlatIdent_1B51D = 0;
+							while true do
+								if (FlatIdent_1B51D == 0) then
+									CurrentLV.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector;
+									CurrentLV.VectorVelocity = flightVector * FlightSpeed;
+									break;
+								end
+							end
+						else
+							CurrentLV.VectorVelocity = Vector3.new(0, 0, 0);
+						end
+						if SpinningEnabled then
+							local FlatIdent_17196 = 0;
+							local targetPart;
+							local spinCFrame;
+							while true do
+								if (FlatIdent_17196 == 1) then
+									CurrentAO.CFrame = spinCFrame;
+									break;
+								end
+								if (FlatIdent_17196 == 0) then
+									targetPart = character.Humanoid.SeatPart or character.HumanoidRootPart;
+									spinCFrame = targetPart.CFrame * CFrame.Angles(0, math.rad(SpinSpeed), 0);
+									FlatIdent_17196 = 1;
+								end
+							end
+						else
+							CurrentAO.CFrame = workspace.CurrentCamera.CFrame;
+						end
+						FlatIdent_7FAC9 = 2;
+					end
+					if (0 == FlatIdent_7FAC9) then
+						if (not FlyingEnabled or not CurrentLV or not CurrentAO) then
+							local FlatIdent_8F59B = 0;
+							while true do
+								if (FlatIdent_8F59B == 0) then
+									if FlightConnection then
+										local FlatIdent_2AC68 = 0;
+										while true do
+											if (FlatIdent_2AC68 == 0) then
+												FlightConnection:Disconnect();
+												FlightConnection = nil;
+												break;
+											end
+										end
+									end
+									return;
+								end
+							end
+						end
+						flightVector = getFlightVector(controlModule);
+						FlatIdent_7FAC9 = 1;
+					end
+					if (FlatIdent_7FAC9 == 2) then
+						if character.HumanoidRootPart then
+							character.Humanoid.PlatformStand = true;
+						end
+						break;
+					end
+				end
+			end);
+			character.AncestryChanged:Connect(function(_, parent)
+				if (not parent and FlyingEnabled) then
+					stopFlying();
+				end
+			end);
+			break;
+		end
+		if (FlatIdent_39B0 == 0) then
+			if FlyingEnabled then
+				return;
+			end
+			LocalPlayer = game:GetService("Players").LocalPlayer;
+			character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait();
+			if not character then
+				local FlatIdent_1BCFB = 0;
+				while true do
+					if (FlatIdent_1BCFB == 0) then
+						Library:Notify({Title="飞行失败",Content="无法获取角色",Duration=2,Icon="x"});
+						return;
+					end
+				end
+			end
+			FlatIdent_39B0 = 1;
+		end
+		if (FlatIdent_39B0 == 2) then
+			if CurrentMoverAttachment then
+				CurrentMoverAttachment:Destroy();
+			end
+			CurrentAO, CurrentLV, humanoid, CurrentMoverAttachment = setupBodyMovers(character);
+			Library:Notify({Title="飞行开启",Content=("速度: " .. FlightSpeed),Duration=2,Icon="check"});
+			controlModule = getControlModule();
+			FlatIdent_39B0 = 3;
+		end
+	end
+end
+local function stopFlying()
+	local FlatIdent_5BA5E = 0;
+	local LocalPlayer;
+	local character;
+	while true do
+		if (FlatIdent_5BA5E == 0) then
+			if not FlyingEnabled then
+				return;
+			end
+			FlyingEnabled = false;
+			SpinningEnabled = false;
+			FlatIdent_5BA5E = 1;
+		end
+		if (FlatIdent_5BA5E == 3) then
+			if CurrentAO then
+				local FlatIdent_9622C = 0;
+				while true do
+					if (FlatIdent_9622C == 0) then
+						CurrentAO:Destroy();
+						CurrentAO = nil;
+						break;
+					end
+				end
+			end
+			if CurrentLV then
+				CurrentLV:Destroy();
+				CurrentLV = nil;
+			end
+			if CurrentMoverAttachment then
+				CurrentMoverAttachment:Destroy();
+				CurrentMoverAttachment = nil;
+			end
+			FlatIdent_5BA5E = 4;
+		end
+		if (FlatIdent_5BA5E == 2) then
+			LocalPlayer = game:GetService("Players").LocalPlayer;
+			character = LocalPlayer.Character;
+			if (character and character:FindFirstChild("Humanoid")) then
+				character.Humanoid.PlatformStand = false;
+			end
+			FlatIdent_5BA5E = 3;
+		end
+		if (FlatIdent_5BA5E == 4) then
+			Library:Notify({Title="飞行关闭",Content="飞行功能已禁用",Duration=2,Icon="x"});
+			break;
+		end
+		if (FlatIdent_5BA5E == 1) then
+			Control = {F=0,B=0,L=0,R=0,Q=0,E=0};
+			LastControl = {F=0,B=0,L=0,R=0,Q=0,E=0};
+			if FlightConnection then
+				local FlatIdent_27404 = 0;
+				while true do
+					if (FlatIdent_27404 == 0) then
+						FlightConnection:Disconnect();
+						FlightConnection = nil;
+						break;
+					end
+				end
+			end
+			FlatIdent_5BA5E = 2;
+		end
+	end
+end
+FlightControl:AddToggle("飞行模式", {Text="飞行模式",Default=false,Callback=function(Value)
+	if Value then
+		startFlying();
+	else
+		stopFlying();
+	end
+end});
+FlightControl:AddToggle("旋转模式", {Text="旋转模式",Default=false,Callback=function(Value)
+	if Value then
+		SpinningEnabled = true;
+	else
+		SpinningEnabled = false;
+	end
+end});
+FlightControl:AddSlider("飞行速度", {Text="飞行速度",Min=1,Max=200,Default=50,Rounding=0,Callback=function(Value)
+	local FlatIdent_2D88C = 0;
+	while true do
+		if (FlatIdent_2D88C == 0) then
+			FlightSpeed = Value;
+			if FlyingEnabled then
+				Library:Notify({Title="速度已更新",Content=("飞行速度: " .. Value),Duration=1,Icon="zap"});
+			end
+			break;
+		end
+	end
+end});
+FlightControl:AddSlider("旋转速度", {Text="旋转速度",Min=1,Max=50,Default=5,Rounding=0,Callback=function(Value)
+	local FlatIdent_D79D = 0;
+	while true do
+		if (0 == FlatIdent_D79D) then
+			SpinSpeed = Value;
+			if SpinningEnabled then
+				Library:Notify({Title="旋转速度已更新",Content=("旋转速度: " .. Value),Duration=1,Icon="refresh-cw"});
+			end
+			break;
+		end
+	end
+end});
+local SpeedHack = false;
+local SpeedValue = 16;
+local SpeedConnection;
+FlightControl:AddToggle("速度增加", {Text="速度增加",Default=false,Callback=function(Value)
+	local FlatIdent_40B41 = 0;
+	while true do
+		if (FlatIdent_40B41 == 0) then
+			SpeedHack = Value;
+			if Value then
+				local FlatIdent_AC2F = 0;
+				while true do
+					if (FlatIdent_AC2F == 0) then
+						if SpeedConnection then
+							SpeedConnection:Disconnect();
+						end
+						SpeedConnection = game:GetService("RunService").Heartbeat:Connect(function()
+							if (game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")) then
+								local hum = game.Players.LocalPlayer.Character.Humanoid;
+								if (hum.MoveDirection.Magnitude > 0) then
+									game.Players.LocalPlayer.Character:TranslateBy((hum.MoveDirection * SpeedValue) / 10);
+								end
+							end
+						end);
+						break;
+					end
+				end
+			elseif SpeedConnection then
+				local FlatIdent_68E92 = 0;
+				while true do
+					if (FlatIdent_68E92 == 0) then
+						SpeedConnection:Disconnect();
+						SpeedConnection = nil;
+						break;
+					end
+				end
+			end
+			break;
+		end
+	end
+end});
+FlightControl:AddSlider("速度设置", {Text="速度设置",Min=1,Max=150,Default=16,Rounding=0,Callback=function(Value)
+	SpeedValue = Value;
+end});
+local fovConnection;
+FlightControl:AddToggle("扩大视野", {Text="扩大视野",Default=false,Callback=function(Value)
+	if Value then
+		local FlatIdent_6C033 = 0;
+		while true do
+			if (0 == FlatIdent_6C033) then
+				if fovConnection then
+					fovConnection:Disconnect();
+				end
+				fovConnection = game:GetService("RunService").Heartbeat:Connect(function()
+					workspace.CurrentCamera.FieldOfView = 120;
+				end);
+				break;
+			end
+		end
+	elseif fovConnection then
+		local FlatIdent_5B2CE = 0;
+		while true do
+			if (FlatIdent_5B2CE == 0) then
+				fovConnection:Disconnect();
+				fovConnection = nil;
+				break;
+			end
+		end
+	end
+end});
+local jumpConn;
+FlightControl:AddToggle("无限跳", {Text="无限跳",Default=false,Callback=function(Value)
+	if Value then
+		local FlatIdent_2E9CB = 0;
+		while true do
+			if (FlatIdent_2E9CB == 0) then
+				if jumpConn then
+					jumpConn:Disconnect();
+				end
+				jumpConn = game:GetService("UserInputService").JumpRequest:Connect(function()
+					local FlatIdent_29E69 = 0;
+					local humanoid;
+					while true do
+						if (FlatIdent_29E69 == 0) then
+							humanoid = game:GetService("Players").LocalPlayer.Character and game:GetService("Players").LocalPlayer.Character:FindFirstChildOfClass("Humanoid");
+							if humanoid then
+								humanoid:ChangeState(Enum.HumanoidStateType.Jumping);
+							end
+							break;
+						end
+					end
+				end);
+				break;
+			end
+		end
+	elseif jumpConn then
+		local FlatIdent_466B2 = 0;
+		while true do
+			if (FlatIdent_466B2 == 0) then
+				jumpConn:Disconnect();
+				jumpConn = nil;
+				break;
+			end
+		end
+	end
+end});
+local Players = game:GetService("Players");
+local LocalPlayer = Players.LocalPlayer;
+LocalPlayer.CharacterAdded:Connect(function()
+	if FlyingEnabled then
+		task.wait(0.5);
+		stopFlying();
+		task.wait(0.1);
+		startFlying();
+	end
+end);
+local CombatControl = Tabs.Main:AddRightGroupbox("战斗功能");
+local ForceLoadAll = false;
+CombatControl:AddToggle("强制加载所有数据", {Text="强制加载所有数据",Default=false,Callback=function(Value)
+	ForceLoadAll = Value;
+	if Value then
+		task.spawn(function()
+			local devv = require(game:GetService("ReplicatedStorage").Devv);
+			local Network = devv.load("Network");
+			local Players = game:GetService("Players");
+			local RunService = game:GetService("RunService");
+			local LocalPlayer = Players.LocalPlayer;
+			local function loadArea(position, radius)
+				if RunService:IsClient() then
+					local FlatIdent_8B336 = 0;
+					while true do
+						if (FlatIdent_8B336 == 0) then
+							pcall(function()
+								Network.InvokeServer("requestStreamAround", position, radius);
+							end);
+							pcall(function()
+								Network.FireServer("setReplicationFocus", position);
+							end);
+							break;
+						end
+					end
+				end
+			end
+			local function loadAllGizmos()
+				local FlatIdent_2BE02 = 0;
+				local White;
+				while true do
+					if (FlatIdent_2BE02 == 0) then
+						White = workspace:FindFirstChild("Local") and workspace.Local:FindFirstChild("Gizmos") and workspace.Local.Gizmos:FindFirstChild("White");
+						if White then
+							for _, gizmo in ipairs(White:GetChildren()) do
+								if gizmo.PrimaryPart then
+									loadArea(gizmo.PrimaryPart.Position, 50);
+									task.wait(0.1);
+								end
+							end
+						end
+						break;
+					end
+				end
+			end
+			local function loadAllPlayers()
+				for _, player in ipairs(Players:GetPlayers()) do
+					if (player.Character and player.Character:FindFirstChild("HumanoidRootPart")) then
+						local FlatIdent_494F6 = 0;
+						while true do
+							if (FlatIdent_494F6 == 0) then
+								loadArea(player.Character.HumanoidRootPart.Position, 50);
+								task.wait(0.1);
+								break;
+							end
+						end
+					end
+				end
+			end
+			while ForceLoadAll do
+				loadAllGizmos();
+				loadAllPlayers();
+				loadArea(Vector3.new(0, 0, 0), 1000);
+				loadArea(Vector3.new(1000, 0, 1000), 1000);
+				loadArea(Vector3.new(-1000, 0, -1000), 1000);
+				loadArea(Vector3.new(1000, 0, -1000), 1000);
+				loadArea(Vector3.new(-1000, 0, 1000), 1000);
+				task.wait(5);
+			end
+		end);
+	else
+		print("强制加载：关闭");
+	end
+end});
+local AutoShoot = false;
+local OriginalShoot = nil;
+local ShooterModule = nil;
+CombatControl:AddToggle("愤怒机器人[全枪]", {Text="愤怒机器人[全枪]",Default=false,Callback=function(Value)
+	AutoShoot = Value;
+	if Value then
+		task.spawn(function()
+			ShooterModule = require(game:GetService("ReplicatedStorage").Client.Wanted.Objects.ClientTool.Components.Guns.Shooter);
+			OriginalShoot = ShooterModule._shoot;
+			local function createBezierCurve(p0, p1, p2, t)
+				return (((1 - t) ^ 2) * p0) + (2 * (1 - t) * t * p1) + ((t ^ 2) * p2);
+			end
+			local function createBeautifulTrail(origin, targetPos)
+				local trailContainer = Instance.new("Folder");
+				trailContainer.Name = "MagicTrail";
+				trailContainer.Parent = workspace;
+				local midPoint = (origin + targetPos) / 2;
+				local direction = (targetPos - origin).Unit;
+				local perpendicular = Vector3.new(-direction.Z, direction.Y, direction.X) * 3;
+				local controlPoint = midPoint + perpendicular + Vector3.new(0, math.random(-3, 3), 0);
+				local curvePoints = {};
+				local numSegments = 20;
+				for i = 0, numSegments do
+					local t = i / numSegments;
+					local point = createBezierCurve(origin, controlPoint, targetPos, t);
+					table.insert(curvePoints, point);
+				end
+				for i = 1, #curvePoints - 1 do
+					local startPoint = curvePoints[i];
+					local endPoint = curvePoints[i + 1];
+					local distance = (endPoint - startPoint).Magnitude;
+					local beamPart = Instance.new("Part");
+					beamPart.Size = Vector3.new(0.15, 0.15, distance);
+					beamPart.Anchored = true;
+					beamPart.CanCollide = false;
+					beamPart.Material = Enum.Material.Neon;
+					beamPart.Transparency = 0.3;
+					beamPart.CFrame = CFrame.new(startPoint, endPoint) * CFrame.new(0, 0, -distance / 2);
+					beamPart.Parent = trailContainer;
+					local pointLight = Instance.new("PointLight");
+					pointLight.Brightness = 5;
+					pointLight.Range = 3;
+					pointLight.Color = Color3.fromRGB(0, 170, 255);
+					pointLight.Parent = beamPart;
+					local particles = Instance.new("ParticleEmitter");
+					particles.Size = NumberSequence.new(0.1, 0.3);
+					particles.Transparency = NumberSequence.new(0.3, 0.8);
+					particles.Lifetime = NumberRange.new(0.5, 1);
+					particles.Rate = 50;
+					particles.Speed = NumberRange.new(1, 2);
+					particles.VelocitySpread = 180;
+					particles.Parent = beamPart;
+				end
+				task.spawn(function()
+					local FlatIdent_32B97 = 0;
+					while true do
+						if (FlatIdent_32B97 == 0) then
+							task.wait(1.5);
+							if (trailContainer and trailContainer.Parent) then
+								trailContainer:Destroy();
+							end
+							break;
+						end
+					end
+				end);
+				return trailContainer;
+			end
+			local function hasLineOfSight(shooterPos, targetPos)
+				local raycastParams = RaycastParams.new();
+				raycastParams.FilterType = Enum.RaycastFilterType.Blacklist;
+				raycastParams.FilterDescendantsInstances = {game.Players.LocalPlayer.Character};
+				raycastParams.IgnoreWater = true;
+				local direction = (targetPos - shooterPos).Unit;
+				local distance = (targetPos - shooterPos).Magnitude;
+				local raycastResult = workspace:Raycast(shooterPos, direction * distance, raycastParams);
+				if raycastResult then
+					local FlatIdent_1FC27 = 0;
+					local hitPart;
+					while true do
+						if (FlatIdent_1FC27 == 0) then
+							hitPart = raycastResult.Instance;
+							if hitPart then
+								local FlatIdent_691EB = 0;
+								local hitCharacter;
+								while true do
+									if (FlatIdent_691EB == 0) then
+										hitCharacter = hitPart:FindFirstAncestorOfClass("Model");
+										if (hitCharacter and hitCharacter:FindFirstChild("Humanoid")) then
+											return true;
+										else
+											return false;
+										end
+										break;
+									end
+								end
+							end
+							break;
+						end
+					end
+				end
+				return true;
+			end
+			ShooterModule._shoot = function(self)
+				if (not self or not self.tool) then
+					return OriginalShoot(self);
+				end
+				local Players = game:GetService("Players");
+				local LocalPlayer = game.Players.LocalPlayer;
+				local LocalCharacter = LocalPlayer.Character;
+				if not LocalCharacter then
+					return OriginalShoot(self);
+				end
+				local shooterPos = (LocalCharacter.HumanoidRootPart and LocalCharacter.HumanoidRootPart.Position) or LocalCharacter.PrimaryPart.Position;
+				local nearestPlayer = nil;
+				local nearestDistance = math.huge;
+				for _, player in ipairs(Players:GetPlayers()) do
+					if ((player ~= LocalPlayer) and player.Character and player.Character:FindFirstChild("HumanoidRootPart")) then
+						local FlatIdent_77172 = 0;
+						local targetPos;
+						local distance;
+						while true do
+							if (FlatIdent_77172 == 1) then
+								if (hasLineOfSight(shooterPos, targetPos) and (distance < nearestDistance)) then
+									local FlatIdent_7E707 = 0;
+									while true do
+										if (FlatIdent_7E707 == 0) then
+											nearestDistance = distance;
+											nearestPlayer = player;
+											break;
+										end
+									end
+								end
+								break;
+							end
+							if (FlatIdent_77172 == 0) then
+								targetPos = player.Character.HumanoidRootPart.Position;
+								distance = (shooterPos - targetPos).Magnitude;
+								FlatIdent_77172 = 1;
+							end
+						end
+					end
+				end
+				if (nearestPlayer and nearestPlayer.Character and nearestPlayer.Character:FindFirstChild("HumanoidRootPart")) then
+					local FlatIdent_32BB2 = 0;
+					local targetPos;
+					while true do
+						if (FlatIdent_32BB2 == 0) then
+							targetPos = nearestPlayer.Character.HumanoidRootPart.Position;
+							self.aimpoint = targetPos;
+							FlatIdent_32BB2 = 1;
+						end
+						if (FlatIdent_32BB2 == 2) then
+							if self.tool then
+								local FlatIdent_869A9 = 0;
+								while true do
+									if (FlatIdent_869A9 == 0) then
+										self.tool.shooting = true;
+										self.tool.fireDebounce = 0;
+										FlatIdent_869A9 = 1;
+									end
+									if (FlatIdent_869A9 == 1) then
+										self.tool.fireMode = "auto";
+										break;
+									end
+								end
+							end
+							break;
+						end
+						if (FlatIdent_32BB2 == 1) then
+							self.aimpoint2 = targetPos;
+							if (self.tool.model and self.tool.model.PrimaryPart) then
+								local FlatIdent_63AE4 = 0;
+								local muzzlePos;
+								while true do
+									if (FlatIdent_63AE4 == 0) then
+										muzzlePos = self.tool.model.PrimaryPart.Position;
+										createBeautifulTrail(muzzlePos, targetPos);
+										break;
+									end
+								end
+							else
+								createBeautifulTrail(shooterPos, targetPos);
+							end
+							FlatIdent_32BB2 = 2;
+						end
+					end
+				elseif self.tool then
+					self.tool.shooting = false;
+				end
+				return OriginalShoot(self);
+			end;
+			while AutoShoot do
+				local FlatIdent_2A644 = 0;
+				while true do
+					if (FlatIdent_2A644 == 0) then
+						if (ShooterModule and ShooterModule._shoot) then
+							local FlatIdent_7F3C8 = 0;
+							local tool;
+							while true do
+								if (FlatIdent_7F3C8 == 0) then
+									tool = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildWhichIsA("Tool");
+									if tool then
+										local FlatIdent_854BA = 0;
+										local shooter;
+										while true do
+											if (FlatIdent_854BA == 0) then
+												shooter = tool:FindFirstChild("Shooter");
+												if not shooter then
+													shooter = {tool=tool};
+												end
+												FlatIdent_854BA = 1;
+											end
+											if (FlatIdent_854BA == 1) then
+												pcall(function()
+													ShooterModule._shoot(shooter);
+												end);
+												break;
+											end
+										end
+									end
+									break;
+								end
+							end
+						end
+						task.wait(0.2);
+						break;
+					end
+				end
+			end
+			if OriginalShoot then
+				ShooterModule._shoot = OriginalShoot;
+			end
+		end);
+	else
+		local FlatIdent_43626 = 0;
+		while true do
+			if (0 == FlatIdent_43626) then
+				print("自动射击：关闭");
+				if (ShooterModule and OriginalShoot) then
+					ShooterModule._shoot = OriginalShoot;
+				end
+				break;
+			end
+		end
+	end
+end});
+local MoneyFarmBox = Tabs.Main:AddRightGroupbox("金钱农场");
+local AutoATM = false;
+MoneyFarmBox:AddToggle("自动ATM", {Text="自动ATM",Default=AutoATM,Callback=function(Value)
+	AutoATM = Value;
+	if Value then
+		local FlatIdent_92F66 = 0;
+		local TimeElapsedATM;
+		local TimeoutThresholdATM;
+		local RootPart;
+		local GizmoFolder;
+		local ATMPatrolPoints;
+		local GetBasePart;
+		local IsValidATMTarget;
+		local FindClosestATMTarget;
+		local TeleportTo;
+		local SpamInteract;
+		local ProcessATMCollection;
+		while true do
+			if (FlatIdent_92F66 == 3) then
+				function TeleportTo(target)
+					if (typeof(target) ~= "Instance") then
+						if (typeof(target) == "Vector3") then
+							RootPart.CFrame = CFrame.new(target);
+						end
+					else
+						RootPart.CFrame = target.CFrame * CFrame.new(0, 5, 0);
+					end
+				end
+				SpamInteract = nil;
+				function SpamInteract(duration)
+					local start = tick();
+					while (tick() - start) < duration do
+						local FlatIdent_30F75 = 0;
+						while true do
+							if (0 == FlatIdent_30F75) then
+								game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.E, false, game);
+								game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.E, false, game);
+								FlatIdent_30F75 = 1;
+							end
+							if (1 == FlatIdent_30F75) then
+								task.wait(0.05);
+								break;
+							end
+						end
+					end
+				end
+				ProcessATMCollection = nil;
+				FlatIdent_92F66 = 4;
+			end
+			if (FlatIdent_92F66 == 1) then
+				ATMPatrolPoints = {Vector3.new(-1137, 78, -1953),Vector3.new(-44, 63, -2083),Vector3.new(194, 60, -2884),Vector3.new(-412, 106, -1301),Vector3.new(-377, 410, -741),Vector3.new(-985, 380, -1145),Vector3.new(-854, 406, -1505)};
+				GetBasePart = nil;
+				function GetBasePart(instance)
+					if instance:IsA("BasePart") then
+						return instance;
+					end
+					for _, descendant in ipairs(instance:GetDescendants()) do
+						if descendant:IsA("BasePart") then
+							return descendant;
+						end
+					end
+				end
+				IsValidATMTarget = nil;
+				FlatIdent_92F66 = 2;
+			end
+			if (FlatIdent_92F66 == 2) then
+				function IsValidATMTarget(instance)
+					local FlatIdent_3B868 = 0;
+					local typeAttr;
+					while true do
+						if (FlatIdent_3B868 == 0) then
+							typeAttr = instance:GetAttribute("gizmoType");
+							return typeAttr == "ATM";
+						end
+					end
+				end
+				FindClosestATMTarget = nil;
+				function FindClosestATMTarget()
+					local minDistance = math.huge;
+					local closestPart = nil;
+					for _, item in ipairs(GizmoFolder:GetChildren()) do
+						if IsValidATMTarget(item) then
+							local FlatIdent_829F9 = 0;
+							local part;
+							while true do
+								if (FlatIdent_829F9 == 0) then
+									part = GetBasePart(item);
+									if part then
+										local FlatIdent_89562 = 0;
+										local dist;
+										while true do
+											if (FlatIdent_89562 == 0) then
+												dist = (RootPart.Position - part.Position).Magnitude;
+												if (dist < minDistance) then
+													local FlatIdent_10DED = 0;
+													while true do
+														if (FlatIdent_10DED == 0) then
+															closestPart = part;
+															minDistance = dist;
+															break;
+														end
+													end
+												end
+												break;
+											end
+										end
+									end
+									break;
+								end
+							end
+						end
+					end
+					return closestPart;
+				end
+				TeleportTo = nil;
+				FlatIdent_92F66 = 3;
+			end
+			if (FlatIdent_92F66 == 0) then
+				TimeElapsedATM = 0;
+				TimeoutThresholdATM = 30;
+				RootPart = (game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()):WaitForChild("HumanoidRootPart");
+				GizmoFolder = workspace.Local.Gizmos.White;
+				FlatIdent_92F66 = 1;
+			end
+			if (FlatIdent_92F66 == 4) then
+				function ProcessATMCollection(targetPart)
+					local FlatIdent_360E8 = 0;
+					local start;
+					local maxWait;
+					while true do
+						if (FlatIdent_360E8 == 1) then
+							while ((tick() - start) < maxWait) and targetPart.Parent and not targetPart:GetAttribute("Collected") do
+								task.wait(0.1);
+							end
+							SpamInteract(1.5);
+							break;
+						end
+						if (FlatIdent_360E8 == 0) then
+							start = tick();
+							maxWait = 3;
+							FlatIdent_360E8 = 1;
+						end
+					end
+				end
+				task.spawn(function()
+					while AutoATM do
+						local FlatIdent_5AA23 = 0;
+						local target;
+						while true do
+							if (FlatIdent_5AA23 == 0) then
+								target = FindClosestATMTarget();
+								if target then
+									local FlatIdent_3F15E = 0;
+									while true do
+										if (FlatIdent_3F15E == 1) then
+											SpamInteract(1.5);
+											ProcessATMCollection(target);
+											FlatIdent_3F15E = 2;
+										end
+										if (FlatIdent_3F15E == 2) then
+											TimeElapsedATM = 0;
+											break;
+										end
+										if (FlatIdent_3F15E == 0) then
+											TeleportTo(target);
+											task.wait(0.3);
+											FlatIdent_3F15E = 1;
+										end
+									end
+								else
+									local FlatIdent_1DFAF = 0;
+									while true do
+										if (FlatIdent_1DFAF == 0) then
+											TimeElapsedATM = TimeElapsedATM + 0.7;
+											TeleportTo(ATMPatrolPoints[math.random(1, #ATMPatrolPoints)]);
+											FlatIdent_1DFAF = 1;
+										end
+										if (FlatIdent_1DFAF == 1) then
+											if (TimeoutThresholdATM <= TimeElapsedATM) then
+												TimeElapsedATM = 0;
+											end
+											break;
+										end
+									end
+								end
+								FlatIdent_5AA23 = 1;
+							end
+							if (FlatIdent_5AA23 == 1) then
+								task.wait(0.7);
+								break;
+							end
+						end
+					end
+				end);
+				break;
+			end
+		end
+	end
+end});
+local AutoRegister = false;
+MoneyFarmBox:AddToggle("自动收银机", {Text="自动收银机",Default=AutoRegister,Callback=function(Value)
+	AutoRegister = Value;
+	if Value then
+		local TimeElapsedRegister = 0;
+		local TimeoutThresholdRegister = 30;
+		local RootPart = (game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait()):WaitForChild("HumanoidRootPart");
+		local GizmoFolder = workspace.Local.Gizmos.White;
+		local RegisterPatrolPoints = {Vector3.new(-1000, 100, -2000),Vector3.new(-500, 100, -2200),Vector3.new(100, 100, -2500)};
+		local function GetBasePart(instance)
+			local FlatIdent_1E4CB = 0;
+			while true do
+				if (FlatIdent_1E4CB == 0) then
+					if instance:IsA("BasePart") then
+						return instance;
+					end
+					for _, descendant in ipairs(instance:GetDescendants()) do
+						if descendant:IsA("BasePart") then
+							return descendant;
+						end
+					end
+					break;
+				end
+			end
+		end
+		local function IsValidRegisterTarget(instance)
+			local FlatIdent_1D701 = 0;
+			local typeAttr;
+			while true do
+				if (FlatIdent_1D701 == 0) then
+					typeAttr = instance:GetAttribute("gizmoType");
+					return typeAttr == "Register";
+				end
+			end
+		end
+		local function FindClosestRegisterTarget()
+			local minDistance = math.huge;
+			local closestPart = nil;
+			for _, item in ipairs(GizmoFolder:GetChildren()) do
+				if IsValidRegisterTarget(item) then
+					local FlatIdent_6066D = 0;
+					local part;
+					while true do
+						if (FlatIdent_6066D == 0) then
+							part = GetBasePart(item);
+							if part then
+								local FlatIdent_43BF7 = 0;
+								local dist;
+								while true do
+									if (0 == FlatIdent_43BF7) then
+										dist = (RootPart.Position - part.Position).Magnitude;
+										if (dist < minDistance) then
+											local FlatIdent_6E214 = 0;
+											while true do
+												if (FlatIdent_6E214 == 0) then
+													closestPart = part;
+													minDistance = dist;
+													break;
+												end
+											end
+										end
+										break;
+									end
+								end
+							end
+							break;
+						end
+					end
+				end
+			end
+			return closestPart;
+		end
+		local function TeleportTo(target)
+			if (typeof(target) ~= "Instance") then
+				if (typeof(target) == "Vector3") then
+					RootPart.CFrame = CFrame.new(target);
+				end
+			else
+				RootPart.CFrame = target.CFrame * CFrame.new(0, 5, 0);
+			end
+		end
+		local function SpamInteract(duration)
+			local FlatIdent_90E07 = 0;
+			local start;
+			while true do
+				if (FlatIdent_90E07 == 0) then
+					start = tick();
+					while (tick() - start) < duration do
+						game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.E, false, game);
+						game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.E, false, game);
+						task.wait(0.05);
+					end
+					break;
+				end
+			end
+		end
+		local function ProcessRegisterCollection(targetPart)
+			local FlatIdent_508D4 = 0;
+			local start;
+			local maxWait;
+			while true do
+				if (1 == FlatIdent_508D4) then
+					while ((tick() - start) < maxWait) and targetPart.Parent and not targetPart:GetAttribute("Collected") do
+						task.wait(0.1);
+					end
+					SpamInteract(1.2);
+					break;
+				end
+				if (FlatIdent_508D4 == 0) then
+					start = tick();
+					maxWait = 2;
+					FlatIdent_508D4 = 1;
+				end
+			end
+		end
+		task.spawn(function()
+			while AutoRegister do
+				local target = FindClosestRegisterTarget();
+				if target then
+					local FlatIdent_1691A = 0;
+					while true do
+						if (FlatIdent_1691A == 0) then
+							TeleportTo(target);
+							task.wait(0.3);
+							FlatIdent_1691A = 1;
+						end
+						if (2 == FlatIdent_1691A) then
+							TimeElapsedRegister = 0;
+							break;
+						end
+						if (FlatIdent_1691A == 1) then
+							SpamInteract(1.2);
+							ProcessRegisterCollection(target);
+							FlatIdent_1691A = 2;
+						end
+					end
+				else
+					local FlatIdent_21E03 = 0;
+					while true do
+						if (FlatIdent_21E03 == 1) then
+							if (TimeoutThresholdRegister <= TimeElapsedRegister) then
+								TimeElapsedRegister = 0;
+							end
+							break;
+						end
+						if (FlatIdent_21E03 == 0) then
+							TimeElapsedRegister = TimeElapsedRegister + 0.7;
+							TeleportTo(RegisterPatrolPoints[math.random(1, #RegisterPatrolPoints)]);
+							FlatIdent_21E03 = 1;
+						end
+					end
+				end
+				task.wait(0.7);
+			end
+		end);
+	end
+end});
+local AutoPickupBox = Tabs.Main:AddLeftGroupbox("自动拾取");
+local AutoGold = false;
+AutoPickupBox:AddToggle("自动拾取金条", {Text="自动拾取金条",Default=AutoGold,Callback=function(Value)
+	local FlatIdent_2C7C4 = 0;
+	while true do
+		if (FlatIdent_2C7C4 == 0) then
+			AutoGold = Value;
+			if Value then
+				task.spawn(function()
+					local FlatIdent_8239F = 0;
+					local GetRootPart;
+					while true do
+						if (FlatIdent_8239F == 1) then
+							while AutoGold do
+								local FlatIdent_4D11E = 0;
+								local RootPart;
+								local White;
+								while true do
+									if (FlatIdent_4D11E == 0) then
+										RootPart = GetRootPart();
+										White = workspace:FindFirstChild("Local") and workspace.Local:FindFirstChild("Gizmos") and workspace.Local.Gizmos:FindFirstChild("White");
+										FlatIdent_4D11E = 1;
+									end
+									if (FlatIdent_4D11E == 1) then
+										if (White and RootPart) then
+											for _, Item in ipairs(White:GetChildren()) do
+												if ((Item.Name == "Gold Bar") and AutoGold) then
+													local FlatIdent_40FD3 = 0;
+													local Target;
+													while true do
+														if (FlatIdent_40FD3 == 0) then
+															Target = Item.PrimaryPart or Item:FindFirstChildWhichIsA("BasePart", true);
+															if Target then
+																local FlatIdent_740DC = 0;
+																while true do
+																	if (FlatIdent_740DC == 1) then
+																		game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.E, false, game);
+																		task.wait(0.05);
+																		FlatIdent_740DC = 2;
+																	end
+																	if (FlatIdent_740DC == 0) then
+																		RootPart.CFrame = Target.CFrame * CFrame.new(0, 0, -2.5);
+																		task.wait(0.2);
+																		FlatIdent_740DC = 1;
+																	end
+																	if (FlatIdent_740DC == 2) then
+																		game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.E, false, game);
+																		repeat
+																			task.wait(0.1);
+																		until not Item.Parent or not AutoGold 
+																		break;
+																	end
+																end
+															end
+															break;
+														end
+													end
+												end
+												if not AutoGold then
+													break;
+												end
+											end
+										end
+										task.wait(0.5);
+										break;
+									end
+								end
+							end
+							break;
+						end
+						if (0 == FlatIdent_8239F) then
+							GetRootPart = nil;
+							function GetRootPart()
+								local FlatIdent_58E6A = 0;
+								local Character;
+								while true do
+									if (FlatIdent_58E6A == 0) then
+										Character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait();
+										return Character:WaitForChild("HumanoidRootPart", 5);
+									end
+								end
+							end
+							FlatIdent_8239F = 1;
+						end
+					end
+				end);
+			end
+			break;
+		end
+	end
+end});
+local AutoWorldItem = false;
+AutoPickupBox:AddToggle("自动拾取礼物盒", {Text="自动拾取礼物盒",Default=AutoWorldItem,Callback=function(Value)
+	local FlatIdent_30B1F = 0;
+	while true do
+		if (FlatIdent_30B1F == 0) then
+			AutoWorldItem = Value;
+			if Value then
+				task.spawn(function()
+					local FlatIdent_8CB90 = 0;
+					local GetRootPart;
+					while true do
+						if (FlatIdent_8CB90 == 0) then
+							GetRootPart = nil;
+							function GetRootPart()
+								local FlatIdent_87441 = 0;
+								local Character;
+								while true do
+									if (FlatIdent_87441 == 0) then
+										Character = game.Players.LocalPlayer.Character or game.Players.LocalPlayer.CharacterAdded:Wait();
+										return Character:WaitForChild("HumanoidRootPart", 5);
+									end
+								end
+							end
+							FlatIdent_8CB90 = 1;
+						end
+						if (FlatIdent_8CB90 == 1) then
+							while AutoWorldItem do
+								local FlatIdent_243F3 = 0;
+								local RootPart;
+								local White;
+								while true do
+									if (FlatIdent_243F3 == 1) then
+										if (White and RootPart) then
+											for _, Item in ipairs(White:GetChildren()) do
+												if ((Item.Name == "WorldItem") and AutoWorldItem) then
+													local FlatIdent_47EEF = 0;
+													local Target;
+													while true do
+														if (FlatIdent_47EEF == 0) then
+															Target = Item.PrimaryPart or Item:FindFirstChildWhichIsA("BasePart", true);
+															if Target then
+																local FlatIdent_73F66 = 0;
+																while true do
+																	if (FlatIdent_73F66 == 1) then
+																		game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.E, false, game);
+																		task.wait(0.05);
+																		FlatIdent_73F66 = 2;
+																	end
+																	if (FlatIdent_73F66 == 2) then
+																		game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.E, false, game);
+																		repeat
+																			task.wait(0.1);
+																		until not Item.Parent or not AutoWorldItem 
+																		break;
+																	end
+																	if (FlatIdent_73F66 == 0) then
+																		RootPart.CFrame = Target.CFrame * CFrame.new(0, 0, -2.5);
+																		task.wait(0.2);
+																		FlatIdent_73F66 = 1;
+																	end
+																end
+															end
+															break;
+														end
+													end
+												end
+												if not AutoWorldItem then
+													break;
+												end
+											end
+										end
+										task.wait(0.5);
+										break;
+									end
+									if (FlatIdent_243F3 == 0) then
+										RootPart = GetRootPart();
+										White = workspace:FindFirstChild("Local") and workspace.Local:FindFirstChild("Gizmos") and workspace.Local.Gizmos:FindFirstChild("White");
+										FlatIdent_243F3 = 1;
+									end
+								end
+							end
+							break;
+						end
+					end
+				end);
+			else
+				print("礼物盒：关闭");
+			end
+			break;
+		end
+	end
+end});
+local LocationTeleportBox = Tabs.Main:AddRightGroupbox("地点传送");
+LocationTeleportBox:AddButton("奥菲的价值兑换", function()
+	local FlatIdent_3416F = 0;
+	local p;
+	local c;
+	local h;
+	while true do
+		if (FlatIdent_3416F == 1) then
+			h = c:WaitForChild("HumanoidRootPart");
+			h.CFrame = CFrame.new(-2907.68848, 37.1002731, 1444.74817, 0.848566413, 3.9380446e-8, -0.529088855, -1.774107e-8, 1, 4.5977092e-8, 0.529088855, -2.962804e-8, 0.848566413);
+			FlatIdent_3416F = 2;
+		end
+		if (FlatIdent_3416F == 0) then
+			p = game.Players.LocalPlayer;
+			c = p.Character or p.CharacterAdded:Wait();
+			FlatIdent_3416F = 1;
+		end
+		if (FlatIdent_3416F == 2) then
+			Library:Notify({Title="传送成功",Content="已传送到奥菲的价值兑换",Duration=2,Icon="check"});
+			break;
+		end
+	end
+end);
+LocationTeleportBox:AddButton("绿洲银行", function()
+	local p = game.Players.LocalPlayer;
+	local c = p.Character or p.CharacterAdded:Wait();
+	local h = c:WaitForChild("HumanoidRootPart");
+	h.CFrame = CFrame.new(-431.537354, 39.6113892, -1400.08313, -0.901108384, -1.61008e-8, -0.433593899, -5.2681104e-9, 1, -2.618487e-8, 0.433593899, -2.1311186e-8, -0.901108384);
+	Library:Notify({Title="传送成功",Content="已传送到绿洲银行",Duration=2,Icon="check"});
+end);
+LocationTeleportBox:AddButton("绿洲城警察", function()
+	local FlatIdent_59521 = 0;
+	local p;
+	local c;
+	local h;
+	while true do
+		if (FlatIdent_59521 == 0) then
+			p = game.Players.LocalPlayer;
+			c = p.Character or p.CharacterAdded:Wait();
+			FlatIdent_59521 = 1;
+		end
+		if (FlatIdent_59521 == 1) then
+			h = c:WaitForChild("HumanoidRootPart");
+			h.CFrame = CFrame.new(2578.02393, 119.169289, -718.579773, -0.395326763, -5.9598324e-8, -0.918540537, -9.65633e-9, 1, -5.232432e-8, 0.918540537, 7.947669e-8, -0.395326763);
+			FlatIdent_59521 = 2;
+		end
+		if (FlatIdent_59521 == 2) then
+			Library:Notify({Title="传送成功",Content="已传送到绿洲城警察",Duration=2,Icon="check"});
+			break;
+		end
+	end
+end);
+LocationTeleportBox:AddButton("金库", function()
+	local FlatIdent_8770C = 0;
+	local p;
+	local c;
+	local h;
+	while true do
+		if (FlatIdent_8770C == 2) then
+			Library:Notify({Title="传送成功",Content="已传送到金库",Duration=2,Icon="check"});
+			break;
+		end
+		if (FlatIdent_8770C == 1) then
+			h = c:WaitForChild("HumanoidRootPart");
+			h.CFrame = CFrame.new(-400.492279, 163.151733, -1242.72632, -0.912052214, -1.09039995e-8, -0.410074085, 1.4650267e-8, 1, -5.9174205e-8, 0.410074085, -5.997766e-8, -0.912052214);
+			FlatIdent_8770C = 2;
+		end
+		if (FlatIdent_8770C == 0) then
+			p = game.Players.LocalPlayer;
+			c = p.Character or p.CharacterAdded:Wait();
+			FlatIdent_8770C = 1;
+		end
+	end
+end);
+LocationTeleportBox:AddButton("犯罪基地", function()
+	local FlatIdent_1077D = 0;
+	local p;
+	local c;
+	local h;
+	while true do
+		if (1 == FlatIdent_1077D) then
+			h = c:WaitForChild("HumanoidRootPart");
+			h.CFrame = CFrame.new(-5981.50586, 37.2680244, 1245.22046, -0.733384013, -3.6538985e-8, -0.679814577, -1.7351333e-8, 1, -3.502984e-8, 0.679814577, -1.38946366e-8, -0.733384013);
+			FlatIdent_1077D = 2;
+		end
+		if (FlatIdent_1077D == 2) then
+			Library:Notify({Title="传送成功",Content="已传送到犯罪基地",Duration=2,Icon="check"});
+			break;
+		end
+		if (0 == FlatIdent_1077D) then
+			p = game.Players.LocalPlayer;
+			c = p.Character or p.CharacterAdded:Wait();
+			FlatIdent_1077D = 1;
+		end
+	end
+end);
+LocationTeleportBox:AddButton("烈焰要塞", function()
+	local FlatIdent_7FF2C = 0;
+	local p;
+	local c;
+	local h;
+	while true do
+		if (FlatIdent_7FF2C == 1) then
+			h = c:WaitForChild("HumanoidRootPart");
+			h.CFrame = CFrame.new(-1494.58496, 41.16481, 3364.56055, 0.961387396, 1.07588015e-7, 0.275198698, -9.5233396e-8, 1, -5.8255473e-8, -0.275198698, 2.97983e-8, 0.961387396);
+			FlatIdent_7FF2C = 2;
+		end
+		if (0 == FlatIdent_7FF2C) then
+			p = game.Players.LocalPlayer;
+			c = p.Character or p.CharacterAdded:Wait();
+			FlatIdent_7FF2C = 1;
+		end
+		if (FlatIdent_7FF2C == 2) then
+			Library:Notify({Title="传送成功",Content="已传送到烈焰要塞",Duration=2,Icon="check"});
+			break;
+		end
+	end
+end);
+local PlayerTeleportBox = Tabs.Main:AddLeftGroupbox("玩家传送");
+local TargetPlayerName = "";
+local TeleportPosition = "前方";
+PlayerTeleportBox:AddInput("输入玩家用户名", {Text="玩家名称",Default="",Placeholder="输入玩家名称",Callback=function(Value)
+	TargetPlayerName = Value;
+end});
+PlayerTeleportBox:AddDropdown("传送部位", {Values={"前方","后方","头顶","左侧","右侧"},Default=1,Multi=false,Callback=function(Value)
+	TeleportPosition = Value;
+end});
+PlayerTeleportBox:AddButton("传送一次", function()
+	if (TargetPlayerName and (TargetPlayerName ~= "") and TeleportPosition) then
+		local targetPlayer = game.Players:FindFirstChild(TargetPlayerName);
+		if (targetPlayer and (targetPlayer ~= game.Players.LocalPlayer)) then
+			if (targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")) then
+				local p = game.Players.LocalPlayer;
+				local c = p.Character or p.CharacterAdded:Wait();
+				local h = c:WaitForChild("HumanoidRootPart");
+				local targetCFrame = targetPlayer.Character.HumanoidRootPart.CFrame;
+				if (TeleportPosition == "前方") then
+					h.CFrame = targetCFrame * CFrame.new(0, 0, -5);
+				elseif (TeleportPosition == "后方") then
+					h.CFrame = targetCFrame * CFrame.new(0, 0, 5);
+				elseif (TeleportPosition == "头顶") then
+					h.CFrame = targetCFrame * CFrame.new(0, 5, 0);
+				elseif (TeleportPosition == "左侧") then
+					h.CFrame = targetCFrame * CFrame.new(-5, 0, 0);
+				elseif (TeleportPosition == "右侧") then
+					h.CFrame = targetCFrame * CFrame.new(5, 0, 0);
+				end
+				Library:Notify({Title="传送成功",Content=("已传送到玩家 " .. TargetPlayerName .. " 的" .. TeleportPosition),Duration=2,Icon="check"});
+			else
+				Library:Notify({Title="传送失败",Content="目标玩家没有角色或缺少HumanoidRootPart",Duration=2,Icon="x"});
+			end
+		else
+			Library:Notify({Title="传送失败",Content="未找到玩家或玩家无效",Duration=2,Icon="x"});
+		end
+	else
+		Library:Notify({Title="传送失败",Content="请输入玩家名称并选择传送位置",Duration=2,Icon="x"});
+	end
+end);
+local FixedTeleport = false;
+PlayerTeleportBox:AddToggle("固定传送", {Text="固定传送",Default=false,Callback=function(Value)
+	local FlatIdent_58A9D = 0;
+	while true do
+		if (0 == FlatIdent_58A9D) then
+			FixedTeleport = Value;
+			if Value then
+				task.spawn(function()
+					while FixedTeleport do
+						local FlatIdent_5EF9 = 0;
+						while true do
+							if (FlatIdent_5EF9 == 0) then
+								if (TargetPlayerName and (TargetPlayerName ~= "") and TeleportPosition) then
+									local targetPlayer = game.Players:FindFirstChild(TargetPlayerName);
+									if (targetPlayer and (targetPlayer ~= game.Players.LocalPlayer)) then
+										if (targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")) then
+											local FlatIdent_8CF9A = 0;
+											local p;
+											local c;
+											local h;
+											local targetCFrame;
+											while true do
+												if (FlatIdent_8CF9A == 1) then
+													h = c:WaitForChild("HumanoidRootPart");
+													targetCFrame = targetPlayer.Character.HumanoidRootPart.CFrame;
+													FlatIdent_8CF9A = 2;
+												end
+												if (FlatIdent_8CF9A == 2) then
+													if (TeleportPosition == "前方") then
+														h.CFrame = targetCFrame * CFrame.new(0, 0, -5);
+													elseif (TeleportPosition == "后方") then
+														h.CFrame = targetCFrame * CFrame.new(0, 0, 5);
+													elseif (TeleportPosition == "头顶") then
+														h.CFrame = targetCFrame * CFrame.new(0, 5, 0);
+													elseif (TeleportPosition == "左侧") then
+														h.CFrame = targetCFrame * CFrame.new(-5, 0, 0);
+													elseif (TeleportPosition == "右侧") then
+														h.CFrame = targetCFrame * CFrame.new(5, 0, 0);
+													end
+													break;
+												end
+												if (0 == FlatIdent_8CF9A) then
+													p = game.Players.LocalPlayer;
+													c = p.Character or p.CharacterAdded:Wait();
+													FlatIdent_8CF9A = 1;
+												end
+											end
+										end
+									end
+								end
+								task.wait(0.1);
+								break;
+							end
+						end
+					end
+				end);
+			end
+			break;
+		end
+	end
+end});
+local BypassGroup = Tabs.Main:AddLeftGroupbox("绕过类");
+local WeaponModGroup = Tabs.Main:AddLeftGroupbox("武器修改");
+local AimBotGroup = Tabs.Main:AddRightGroupbox("自瞄功能");
+local ESPGroup = Tabs.Main:AddRightGroupbox("透视功能");
+local ImmuneTurret = false;
+BypassGroup:AddToggle("绕过炮塔伤害", {Text="绕过炮塔伤害",Default=ImmuneTurret,Callback=function(v)
+	local FlatIdent_7735C = 0;
+	while true do
+		if (FlatIdent_7735C == 0) then
+			ImmuneTurret = v;
+			if v then
+				local oldFireServer = game:GetService("ReplicatedStorage").Shared.Core.Network.FireServer;
+				game:GetService("ReplicatedStorage").Shared.Core.Network.FireServer = function(self, event, ...)
+					local FlatIdent_38BA4 = 0;
+					while true do
+						if (FlatIdent_38BA4 == 0) then
+							if ((event == "registerLocalHit") and (... == "Turret")) then
+								return nil;
+							end
+							return oldFireServer(self, event, ...);
+						end
+					end
+				end;
+			else
+			end
+			break;
+		end
+	end
+end});
+WeaponModGroup:AddButton("无限子弹", function()
+	local FlatIdent_8EF6C = 0;
+	local Shooter;
+	local originalShoot;
+	while true do
+		if (1 == FlatIdent_8EF6C) then
+			Shooter._shoot = function(self)
+				local FlatIdent_1BD19 = 0;
+				while true do
+					if (FlatIdent_1BD19 == 0) then
+						self.ammo = 9999;
+						self.totalAmmo = 9999;
+						FlatIdent_1BD19 = 1;
+					end
+					if (FlatIdent_1BD19 == 1) then
+						return originalShoot(self);
+					end
+				end
+			end;
+			Library:Notify({Title="成功",Content="无限子弹已启用",Duration=2,Icon="check"});
+			break;
+		end
+		if (0 == FlatIdent_8EF6C) then
+			Shooter = require(game:GetService("ReplicatedStorage").Client.Wanted.Objects.ClientTool.Components.Guns.Shooter);
+			originalShoot = Shooter._shoot;
+			FlatIdent_8EF6C = 1;
+		end
+	end
+end);
+WeaponModGroup:AddButton("无后坐力", function()
+	local FlatIdent_4CEEC = 0;
+	local Shooter;
+	local originalShoot;
+	while true do
+		if (FlatIdent_4CEEC == 1) then
+			Shooter._shoot = function(self)
+				local FlatIdent_1F33B = 0;
+				while true do
+					if (FlatIdent_1F33B == 0) then
+						self.recoil = {firstShotKick=0,climb=0,spread=0};
+						return originalShoot(self);
+					end
+				end
+			end;
+			Library:Notify({Title="成功",Content="无后坐力已启用",Duration=2,Icon="check"});
+			break;
+		end
+		if (FlatIdent_4CEEC == 0) then
+			Shooter = require(game:GetService("ReplicatedStorage").Client.Wanted.Objects.ClientTool.Components.Guns.Shooter);
+			originalShoot = Shooter._shoot;
+			FlatIdent_4CEEC = 1;
+		end
+	end
+end);
+WeaponModGroup:AddButton("无扩散", function()
+	local Shooter = require(game:GetService("ReplicatedStorage").Client.Wanted.Objects.ClientTool.Components.Guns.Shooter);
+	local originalShoot = Shooter._shoot;
+	Shooter._shoot = function(self)
+		local FlatIdent_1BC4A = 0;
+		while true do
+			if (FlatIdent_1BC4A == 0) then
+				self.aim = {spreadAngle=0,zeroing=1000};
+				return originalShoot(self);
+			end
+		end
+	end;
+	Library:Notify({Title="成功",Content="无扩散已启用",Duration=2,Icon="check"});
+end);
+WeaponModGroup:AddButton("快速射击", function()
+	local FlatIdent_397D1 = 0;
+	local Shooter;
+	local originalShoot;
+	while true do
+		if (FlatIdent_397D1 == 1) then
+			Shooter._shoot = function(self)
+				local FlatIdent_1A6E7 = 0;
+				while true do
+					if (FlatIdent_1A6E7 == 0) then
+						self.tool.fireDebounce = 0;
+						self.tool.fireMode = "auto";
+						FlatIdent_1A6E7 = 1;
+					end
+					if (FlatIdent_1A6E7 == 1) then
+						return originalShoot(self);
+					end
+				end
+			end;
+			Library:Notify({Title="成功",Content="快速射击已启用",Duration=2,Icon="check"});
+			break;
+		end
+		if (FlatIdent_397D1 == 0) then
+			Shooter = require(game:GetService("ReplicatedStorage").Client.Wanted.Objects.ClientTool.Components.Guns.Shooter);
+			originalShoot = Shooter._shoot;
+			FlatIdent_397D1 = 1;
+		end
+	end
+end);
+WeaponModGroup:AddButton("无装弹", function()
+	local Shooter = require(game:GetService("ReplicatedStorage").Client.Wanted.Objects.ClientTool.Components.Guns.Shooter);
+	local originalShoot = Shooter._shoot;
+	Shooter._shoot = function(self)
+		local FlatIdent_5D0DC = 0;
+		while true do
+			if (FlatIdent_5D0DC == 0) then
+				self.ammoData = {reloadTime=0,magSize=9999};
+				return originalShoot(self);
+			end
+		end
+	end;
+	Library:Notify({Title="成功",Content="无装弹已启用",Duration=2,Icon="check"});
+end);
+local isAiming = false;
+local isPredicting = false;
+local fov = 50;
+local plr = game:GetService("Players").LocalPlayer;
+local RunService = game:GetService("RunService");
+local Cam = workspace.CurrentCamera;
+local targetPart = "Head";
+local teamCheck = false;
+local aliveCheck = false;
+local smoothness = 0.5;
+local aimStyle = "平滑";
+local isSilentAim = false;
+local silentFov = 30;
+local isAutoShootOnAim = false;
+local shootDelay = 0.1;
+local lastShotTime = 0;
+local FOVring = Drawing.new("Circle");
+FOVring.Visible = false;
+FOVring.Thickness = 2;
+FOVring.Color = Color3.fromRGB(255, 0, 0);
+FOVring.Filled = false;
+FOVring.Radius = fov;
+FOVring.Position = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2);
+local aimConnection = nil;
+local ShooterModule = nil;
+local OriginalShoot = nil;
+local autoShootConnection = nil;
+local isAutoShootingActive = false;
+local function getClosestPlayerInFOV()
+	local nearest = nil;
+	local lastDistance = math.huge;
+	local playerMousePos = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2);
+	local fovToUse = fov;
+	for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+		if (player ~= plr) then
+			local FlatIdent_54124 = 0;
+			local character;
+			while true do
+				if (FlatIdent_54124 == 0) then
+					if (teamCheck and (player.Team == plr.Team)) then
+						continue;
+					end
+					character = player.Character;
+					FlatIdent_54124 = 1;
+				end
+				if (FlatIdent_54124 == 1) then
+					if (character and character:FindFirstChild(targetPart)) then
+						local FlatIdent_285D = 0;
+						local part;
+						local ePos;
+						local isVisible;
+						local screenDistance;
+						while true do
+							if (FlatIdent_285D == 0) then
+								if (aliveCheck and (not character:FindFirstChildOfClass("Humanoid") or (character:FindFirstChildOfClass("Humanoid").Health <= 0))) then
+									continue;
+								end
+								part = character[targetPart];
+								FlatIdent_285D = 1;
+							end
+							if (FlatIdent_285D == 1) then
+								ePos, isVisible = Cam:WorldToViewportPoint(part.Position);
+								screenDistance = (Vector2.new(ePos.x, ePos.y) - playerMousePos).Magnitude;
+								FlatIdent_285D = 2;
+							end
+							if (2 == FlatIdent_285D) then
+								if ((screenDistance < fovToUse) and isVisible) then
+									if (screenDistance < lastDistance) then
+										local FlatIdent_2E7F5 = 0;
+										while true do
+											if (FlatIdent_2E7F5 == 0) then
+												lastDistance = screenDistance;
+												nearest = player;
+												break;
+											end
+										end
+									end
+								end
+								break;
+							end
+						end
+					end
+					break;
+				end
+			end
+		end
+	end
+	return nearest;
+end
+local function smartAimAt(targetPosition)
+	local FlatIdent_1F1FE = 0;
+	local currentCFrame;
+	local targetDirection;
+	while true do
+		if (FlatIdent_1F1FE == 0) then
+			currentCFrame = Cam.CFrame;
+			targetDirection = (targetPosition - currentCFrame.Position).Unit;
+			FlatIdent_1F1FE = 1;
+		end
+		if (FlatIdent_1F1FE == 1) then
+			if (aimStyle == "平滑") then
+				local FlatIdent_6FF03 = 0;
+				local smoothFactor;
+				local lookVector;
+				while true do
+					if (FlatIdent_6FF03 == 0) then
+						smoothFactor = smoothness;
+						lookVector = currentCFrame.LookVector:Lerp(targetDirection, smoothFactor);
+						FlatIdent_6FF03 = 1;
+					end
+					if (FlatIdent_6FF03 == 1) then
+						Cam.CFrame = CFrame.new(currentCFrame.Position, currentCFrame.Position + lookVector);
+						break;
+					end
+				end
+			else
+				Cam.CFrame = CFrame.new(currentCFrame.Position, currentCFrame.Position + targetDirection);
+			end
+			break;
+		end
+	end
+end
+local function aimLoop()
+	local FlatIdent_7C89 = 0;
+	local target;
+	while true do
+		if (FlatIdent_7C89 == 0) then
+			if not isAiming then
+				return;
+			end
+			FOVring.Position = Vector2.new(Cam.ViewportSize.X / 2, Cam.ViewportSize.Y / 2);
+			FlatIdent_7C89 = 1;
+		end
+		if (1 == FlatIdent_7C89) then
+			target = getClosestPlayerInFOV();
+			if (target and target.Character and target.Character:FindFirstChild(targetPart)) then
+				local FlatIdent_2EDA1 = 0;
+				local part;
+				while true do
+					if (FlatIdent_2EDA1 == 0) then
+						part = target.Character[targetPart];
+						smartAimAt(part.Position);
+						FlatIdent_2EDA1 = 1;
+					end
+					if (FlatIdent_2EDA1 == 1) then
+						if (isAutoShootOnAim and ((tick() - lastShotTime) > shootDelay)) then
+							local FlatIdent_936D7 = 0;
+							local tool;
+							while true do
+								if (FlatIdent_936D7 == 0) then
+									tool = plr.Character and plr.Character:FindFirstChildWhichIsA("Tool");
+									if tool then
+										lastShotTime = tick();
+									end
+									break;
+								end
+							end
+						end
+						break;
+					end
+				end
+			end
+			break;
+		end
+	end
+end
+AimBotGroup:AddToggle("开启自瞄", {Text="开启自瞄",Default=false,Callback=function(v)
+	local FlatIdent_11D04 = 0;
+	while true do
+		if (FlatIdent_11D04 == 1) then
+			if v then
+				local FlatIdent_734D3 = 0;
+				while true do
+					if (FlatIdent_734D3 == 0) then
+						if aimConnection then
+							aimConnection:Disconnect();
+						end
+						aimConnection = RunService.RenderStepped:Connect(aimLoop);
+						break;
+					end
+				end
+			elseif aimConnection then
+				local FlatIdent_4185D = 0;
+				while true do
+					if (FlatIdent_4185D == 0) then
+						aimConnection:Disconnect();
+						aimConnection = nil;
+						break;
+					end
+				end
+			end
+			break;
+		end
+		if (FlatIdent_11D04 == 0) then
+			isAiming = v;
+			FOVring.Visible = v;
+			FlatIdent_11D04 = 1;
+		end
+	end
+end});
+AimBotGroup:AddToggle("瞄准时自动射击", {Text="瞄准时自动射击",Default=false,Callback=function(v)
+	isAutoShootOnAim = v;
+end});
+AimBotGroup:AddDropdown("瞄准身体部位", {Values={"头","胸","左手","右手","左腿","右腿"},Default=1,Callback=function(v)
+	local partMap = {["头"]="Head",["胸"]="UpperTorso",["左手"]="LeftHand",["右手"]="RightHand",["左腿"]="LeftFoot",["右腿"]="RightFoot"};
+	targetPart = partMap[v];
+end});
+AimBotGroup:AddSlider("FOV范围", {Text="FOV范围",Min=1,Max=500,Default=50,Rounding=0,Callback=function(v)
+	local FlatIdent_4FBC5 = 0;
+	while true do
+		if (0 == FlatIdent_4FBC5) then
+			fov = v;
+			FOVring.Radius = v;
+			break;
+		end
+	end
+end});
+AimBotGroup:AddSlider("平滑度", {Text="平滑度",Min=0.01,Max=1,Default=0.5,Rounding=2,Callback=function(v)
+	smoothness = v;
+end});
+AimBotGroup:AddToggle("团队检查", {Text="团队检查",Default=false,Callback=function(v)
+	teamCheck = v;
+end});
+AimBotGroup:AddToggle("活体检测", {Text="活体检测",Default=false,Callback=function(v)
+	aliveCheck = v;
+end});
+local ESPEnabled = false;
+local ShowBox = false;
+local ShowHealth = false;
+local ShowName = false;
+local ShowDistance = false;
+local ShowTracer = false;
+local ShowSkeleton = false;
+local ShowRadar = false;
+local ShowPlayerCount = false;
+local ShowWeapon = false;
+local ShowFOV = false;
+local OutOfViewArrows = false;
+local Chams = false;
+local TeamCheckESP = false;
+local ESPComponents = {};
+local espConnection = nil;
+local function updateESP()
+	local FlatIdent_37395 = 0;
+	while true do
+		if (FlatIdent_37395 == 0) then
+			if not ESPEnabled then
+				return;
+			end
+			for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+				local FlatIdent_89DF6 = 0;
+				local character;
+				local humanoid;
+				local hrp;
+				local position;
+				local onScreen;
+				while true do
+					if (FlatIdent_89DF6 == 4) then
+						position, onScreen = Cam:WorldToViewportPoint(hrp.Position);
+						if onScreen then
+						end
+						break;
+					end
+					if (FlatIdent_89DF6 == 1) then
+						character = player.Character;
+						if not character then
+							continue;
+						end
+						FlatIdent_89DF6 = 2;
+					end
+					if (FlatIdent_89DF6 == 0) then
+						if (player == plr) then
+							continue;
+						end
+						if (TeamCheckESP and (player.Team == plr.Team)) then
+							continue;
+						end
+						FlatIdent_89DF6 = 1;
+					end
+					if (FlatIdent_89DF6 == 3) then
+						hrp = character:FindFirstChild("HumanoidRootPart");
+						if not hrp then
+							continue;
+						end
+						FlatIdent_89DF6 = 4;
+					end
+					if (FlatIdent_89DF6 == 2) then
+						humanoid = character:FindFirstChildOfClass("Humanoid");
+						if (not humanoid or (humanoid.Health <= 0)) then
+							continue;
+						end
+						FlatIdent_89DF6 = 3;
+					end
+				end
+			end
+			break;
+		end
+	end
+end
+ESPGroup:AddToggle("启用ESP", {Text="启用ESP",Default=false,Callback=function(v)
+	ESPEnabled = v;
+	if v then
+		local FlatIdent_47C14 = 0;
+		while true do
+			if (FlatIdent_47C14 == 0) then
+				if espConnection then
+					espConnection:Disconnect();
+				end
+				espConnection = RunService.RenderStepped:Connect(updateESP);
+				break;
+			end
+		end
+	elseif espConnection then
+		local FlatIdent_3EDDC = 0;
+		while true do
+			if (FlatIdent_3EDDC == 0) then
+				espConnection:Disconnect();
+				espConnection = nil;
+				break;
+			end
+		end
+	end
+end});
+ESPGroup:AddToggle("显示方框", {Text="显示方框",Default=false,Callback=function(v)
+	ShowBox = v;
+end});
+ESPGroup:AddToggle("显示血量", {Text="显示血量",Default=false,Callback=function(v)
+	ShowHealth = v;
+end});
+ESPGroup:AddToggle("显示名称", {Text="显示名称",Default=false,Callback=function(v)
+	ShowName = v;
+end});
+ESPGroup:AddToggle("显示距离", {Text="显示距离",Default=false,Callback=function(v)
+	ShowDistance = v;
+end});
+ESPGroup:AddToggle("显示骨骼", {Text="显示骨骼",Default=false,Callback=function(v)
+	ShowSkeleton = v;
+end});
+ESPGroup:AddToggle("团队检查", {Text="团队检查",Default=false,Callback=function(v)
+	TeamCheckESP = v;
+end});
+local function cleanup()
+	if aimConnection then
+		local FlatIdent_643B6 = 0;
+		while true do
+			if (FlatIdent_643B6 == 0) then
+				aimConnection:Disconnect();
+				aimConnection = nil;
+				break;
+			end
+		end
+	end
+	if FOVring then
+		FOVring:Remove();
+	end
+	if espConnection then
+		local FlatIdent_8DBF2 = 0;
+		while true do
+			if (FlatIdent_8DBF2 == 0) then
+				espConnection:Disconnect();
+				espConnection = nil;
+				break;
+			end
+		end
+	end
+end
+game:GetService("Players").LocalPlayer.CharacterAdded:Connect(function()
+	local FlatIdent_4BEE8 = 0;
+	while true do
+		if (FlatIdent_4BEE8 == 0) then
+			if isAiming then
+				task.wait(1);
+				if not aimConnection then
+					aimConnection = RunService.RenderStepped:Connect(aimLoop);
+				end
+			end
+			if (ESPEnabled and not espConnection) then
+				espConnection = RunService.RenderStepped:Connect(updateESP);
+			end
+			break;
+		end
+	end
+end);
+game:GetService("CoreGui").ChildRemoved:Connect(function(child)
+	if ((child.Name == "CloudHub") or child.Name:find("Obsidian")) then
+		cleanup();
+	end
+end);
+local WeaponTeleportBox = Tabs.Main:AddRightGroupbox("武器传送");
+local function teleportAndPickupWeapon(position, weaponName)
+	local FlatIdent_91AA8 = 0;
+	local p;
+	local c;
+	local h;
+	while true do
+		if (FlatIdent_91AA8 == 3) then
+			task.wait(0.1);
+			game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.E, false, game);
+			FlatIdent_91AA8 = 4;
+		end
+		if (FlatIdent_91AA8 == 2) then
+			task.wait(0.5);
+			game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.E, false, game);
+			FlatIdent_91AA8 = 3;
+		end
+		if (FlatIdent_91AA8 == 0) then
+			p = game.Players.LocalPlayer;
+			c = p.Character or p.CharacterAdded:Wait();
+			FlatIdent_91AA8 = 1;
+		end
+		if (4 == FlatIdent_91AA8) then
+			Library:Notify({Title="武器传送",Content=("已尝试传送到" .. weaponName),Duration=2,Icon="target"});
+			break;
+		end
+		if (FlatIdent_91AA8 == 1) then
+			h = c:WaitForChild("HumanoidRootPart");
+			h.CFrame = position;
+			FlatIdent_91AA8 = 2;
+		end
+	end
+end
+WeaponTeleportBox:AddButton("自动瞄准器", function()
+	teleportAndPickupWeapon(CFrame.new(-822.973816, 179.617432, -290.576813, -0.829824746, 4.1572e-8, 0.558024108, -1.7091425e-8, 1, -9.991484e-8, -0.558024108, -9.24494e-8, -0.829824746), "自动瞄准器");
+end);
+WeaponTeleportBox:AddButton("UMP 45", function()
+	teleportAndPickupWeapon(CFrame.new(1358.20264, 143.366074, -1218.008301, -0.711087286, 7.777568e-9, -0.703103721, 0.0004326, 1, 1.0624305e-8, 0.703103721, 7.2505e-9, -0.711087286), "UMP 45");
+end);
+WeaponTeleportBox:AddButton("贝内利M1014", function()
+	teleportAndPickupWeapon(CFrame.new(1345.20422, 141.041168, -4809.10693, -0.879722357, 4.0964014e-8, -0.475487679, 7.8684534e-9, 1, 7.159378e-8, 0.475487679, 5.92413e-8, -0.879722357), "贝内利M1014");
+end);
+WeaponTeleportBox:AddButton("M4A1", function()
+	teleportAndPickupWeapon(CFrame.new(-6342.43115, 134.380051, -1328.82861, -0.984255195, 1.02914e-8, 0.176753372, 1.648925e-8, 1, 3.359626e-8, -0.176753372, 3.59818e-8, -0.984255195), "M4A1");
+end);
+WeaponTeleportBox:AddButton("AK-47", function()
+	teleportAndPickupWeapon(CFrame.new(-4825.20752, 21.3648071, 1192.14551, -0.907641709, 3.2050632e-8, -0.419745833, 5.61627e-8, 1, -4.508672e-8, 0.419745833, -6.44966e-8, -0.907641709), "AK-47");
+end);
+WeaponTeleportBox:AddButton("RPG-7", function()
+	teleportAndPickupWeapon(CFrame.new(-1392.19739, 275.933319, 2199.5188, -0.999439657, -4.083614e-8, -0.0334718302, -4.136207e-8, 1, 1.50201e-8, 0.0334718302, 1.6396225e-8, -0.999439657), "RPG-7");
+end);
+WeaponTeleportBox:AddButton("乌兹", function()
+	teleportAndPickupWeapon(CFrame.new(-1348.55493, 1109.2014694, 2033.73645, -0.322550327, 6.191085e-8, -0.946552336, 8.2431725e-8, 1, 3.731697e-8, 0.946552336, -6.598934e-8, -0.322550327), "乌兹");
+end);
+local EntertainmentBox = Tabs.Main:AddLeftGroupbox("娱乐功能");
+local AUTO_CHAT_TEXT = "SX HUB ！！！";
+local AUTO_CHAT_ENABLED = false;
+local AUTO_CHAT_INTERVAL = 1.5;
+local AUTO_CHAT_MODE = "自定义";
+local chatSystem = {Players=game:GetService("Players"),ReplicatedStorage=game:GetService("ReplicatedStorage"),TextChatService=game:GetService("TextChatService"),messageIndex=1,lastSendTime=0,chatModes={["自定义"]=function()
+	return {AUTO_CHAT_TEXT};
+end,["7字经"]=function()
+	return {"来老弟","你有啥实力","你活着干啥呢","臭底层","快来打压你爹","我在这等着呢","快来打压我"};
+end,["14字经"]=function()
+	return {"你有啥用","你活着干啥呢","赶紧跳了吧","老弟家里几位在哪里","来吧赶紧让我口吃","你爹等着你呢","你个窝囊废","孩子快来呀","怎么不敢和你爹对话了？","你有什么用处","你活着当技女吗？","一句话","来打压我","哈哈哈笑死我了"};
+end,["糖人语言"]=function()
+	return {"我是奶龙","奶龙是我","你是谁？？","我是谁","你干嘛啊？"};
+end,["宣传词"]=function()
+	return {"SX HUB牛逼","打败一切","快来购买","功能多多","支持超多服务器"};
+end},autoChatConnection=nil};
+local function sendChatMessage(msg)
+	local FlatIdent_5062 = 0;
+	local success;
+	while true do
+		if (0 == FlatIdent_5062) then
+			success = false;
+			pcall(function()
+				local FlatIdent_81F6A = 0;
+				local channel;
+				while true do
+					if (FlatIdent_81F6A == 0) then
+						channel = chatSystem.TextChatService.TextChannels:FindFirstChild("RBXGeneral") or chatSystem.TextChatService.TextChannels:FindFirstChild("RBXGeneralChannel");
+						if (channel and channel.SendAsync) then
+							local FlatIdent_101B7 = 0;
+							while true do
+								if (FlatIdent_101B7 == 0) then
+									channel:SendAsync(msg);
+									success = true;
+									break;
+								end
+							end
+						end
+						break;
+					end
+				end
+			end);
+			FlatIdent_5062 = 1;
+		end
+		if (FlatIdent_5062 == 1) then
+			if not success then
+				pcall(function()
+					local FlatIdent_9917B = 0;
+					local events;
+					local request;
+					while true do
+						if (FlatIdent_9917B == 0) then
+							events = chatSystem.ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents");
+							request = events and events:FindFirstChild("SayMessageRequest");
+							FlatIdent_9917B = 1;
+						end
+						if (1 == FlatIdent_9917B) then
+							if request then
+								local FlatIdent_66193 = 0;
+								while true do
+									if (FlatIdent_66193 == 0) then
+										request:FireServer(msg, "All");
+										success = true;
+										break;
+									end
+								end
+							end
+							break;
+						end
+					end
+				end);
+			end
+			if not success then
+				pcall(function()
+					local FlatIdent_89940 = 0;
+					local player;
+					while true do
+						if (FlatIdent_89940 == 0) then
+							player = chatSystem.Players.LocalPlayer;
+							if (player and player.Chat) then
+								player:Chat(msg);
+								success = true;
+							end
+							break;
+						end
+					end
+				end);
+			end
+			FlatIdent_5062 = 2;
+		end
+		if (FlatIdent_5062 == 2) then
+			return success;
+		end
+	end
+end
+local function startAutoChat()
+	local FlatIdent_25440 = 0;
+	while true do
+		if (FlatIdent_25440 == 0) then
+			if chatSystem.autoChatConnection then
+				chatSystem.autoChatConnection:Disconnect();
+			end
+			chatSystem.autoChatConnection = game:GetService("RunService").Heartbeat:Connect(function()
+				if (AUTO_CHAT_ENABLED and chatSystem.chatModes[AUTO_CHAT_MODE]) then
+					local currentTime = tick();
+					local lastSendTime = chatSystem.lastSendTime or 0;
+					local interval = tonumber(AUTO_CHAT_INTERVAL) or 1.5;
+					if ((currentTime - lastSendTime) >= interval) then
+						local FlatIdent_30B76 = 0;
+						local messages;
+						while true do
+							if (FlatIdent_30B76 == 0) then
+								messages = chatSystem.chatModes[AUTO_CHAT_MODE]();
+								if (messages and (#messages > 0)) then
+									local message = messages[chatSystem.messageIndex];
+									sendChatMessage(tostring(message));
+									chatSystem.messageIndex = (chatSystem.messageIndex % #messages) + 1;
+									chatSystem.lastSendTime = currentTime;
+								end
+								break;
+							end
+						end
+					end
+				end
+			end);
+			break;
+		end
+	end
+end
+local function stopAutoChat()
+	if chatSystem.autoChatConnection then
+		local FlatIdent_674F6 = 0;
+		while true do
+			if (FlatIdent_674F6 == 0) then
+				chatSystem.autoChatConnection:Disconnect();
+				chatSystem.autoChatConnection = nil;
+				break;
+			end
+		end
+	end
+end
+EntertainmentBox:AddDropdown("发言模式", {Values={"自定义","7字经","14字经","糖人语言","宣传词"},Default=1,Callback=function(Value)
+	local FlatIdent_927F1 = 0;
+	while true do
+		if (FlatIdent_927F1 == 1) then
+			Library:Notify({Title="发言模式",Content=("已切换到: " .. Value),Duration=2,Icon="message-circle"});
+			break;
+		end
+		if (FlatIdent_927F1 == 0) then
+			AUTO_CHAT_MODE = Value;
+			chatSystem.messageIndex = 1;
+			FlatIdent_927F1 = 1;
+		end
+	end
+end});
+EntertainmentBox:AddInput("自定义发言内容", {Text="发言内容",Default="SX HUB ！！！",Placeholder="输入要发送的消息",Callback=function(Value)
+	local FlatIdent_2F94A = 0;
+	while true do
+		if (FlatIdent_2F94A == 0) then
+			AUTO_CHAT_TEXT = Value;
+			Library:Notify({Title="自定义内容",Content=("已设置: " .. Value),Duration=2,Icon="edit"});
+			break;
+		end
+	end
+end});
+EntertainmentBox:AddToggle("开启自动发言", {Text="开启自动发言",Default=false,Callback=function(Value)
+	AUTO_CHAT_ENABLED = Value;
+	if Value then
+		startAutoChat();
+	else
+		stopAutoChat();
+	end
+	Library:Notify({Title="自动发言",Content=((Value and "已开启") or "已关闭"),Duration=2,Icon=((Value and "play") or "square")});
+end});
+EntertainmentBox:AddSlider("发言间隔", {Text="发言间隔(秒)",Min=0.5,Max=10,Default=1.5,Rounding=1,Callback=function(Value)
+	local FlatIdent_771FD = 0;
+	while true do
+		if (FlatIdent_771FD == 0) then
+			AUTO_CHAT_INTERVAL = Value;
+			Library:Notify({Title="发言间隔",Content=("已设置为: " .. Value .. "秒"),Duration=2,Icon="clock"});
+			break;
+		end
+	end
+end});
+local WeatherBox = Tabs.Main:AddRightGroupbox("天气控制");
+local weatherSettings = {["雨天"]="Rainy",["阴天"]="Overcast",["晴天"]="Clear",["雪天"]="Snowy"};
+local selectedWeather = "晴天";
+local function changeWeather(weatherType)
+	local FlatIdent_3423 = 0;
+	local lighting;
+	while true do
+		if (FlatIdent_3423 == 3) then
+			if (weatherType == "Rainy") then
+				local FlatIdent_3E39 = 0;
+				local rain;
+				while true do
+					if (FlatIdent_3E39 == 3) then
+						rain.Lifetime = NumberRange.new(5);
+						rain.Rate = 100;
+						rain.Speed = NumberRange.new(20);
+						FlatIdent_3E39 = 4;
+					end
+					if (FlatIdent_3E39 == 0) then
+						lighting.Brightness = 0.7;
+						lighting.FogEnd = 5000;
+						lighting.ExposureCompensation = -0.5;
+						FlatIdent_3E39 = 1;
+					end
+					if (FlatIdent_3E39 == 5) then
+						rain.LightEmission = 0.1;
+						break;
+					end
+					if (4 == FlatIdent_3E39) then
+						rain.VelocitySpread = 90;
+						rain.Rotation = NumberRange.new(0, 360);
+						rain.RotSpeed = NumberRange.new(10);
+						FlatIdent_3E39 = 5;
+					end
+					if (FlatIdent_3E39 == 2) then
+						rain.Texture = "rbxassetid://2530913495";
+						rain.Size = NumberSequence.new(0.5);
+						rain.Transparency = NumberSequence.new(0.3);
+						FlatIdent_3E39 = 3;
+					end
+					if (FlatIdent_3E39 == 1) then
+						rain = Instance.new("ParticleEmitter");
+						rain.Name = "WeatherEffect";
+						rain.Parent = lighting;
+						FlatIdent_3E39 = 2;
+					end
+				end
+			elseif (weatherType == "Overcast") then
+				local FlatIdent_62AB4 = 0;
+				while true do
+					if (FlatIdent_62AB4 == 0) then
+						lighting.Brightness = 0.6;
+						lighting.FogEnd = 3000;
+						FlatIdent_62AB4 = 1;
+					end
+					if (FlatIdent_62AB4 == 1) then
+						lighting.ExposureCompensation = -0.8;
+						lighting.OutdoorAmbient = Color3.fromRGB(100, 100, 100);
+						break;
+					end
+				end
+			elseif (weatherType == "Clear") then
+				local FlatIdent_2E48C = 0;
+				while true do
+					if (FlatIdent_2E48C == 1) then
+						lighting.ExposureCompensation = 0.3;
+						lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255);
+						break;
+					end
+					if (FlatIdent_2E48C == 0) then
+						lighting.Brightness = 2;
+						lighting.FogEnd = 20000;
+						FlatIdent_2E48C = 1;
+					end
+				end
+			elseif (weatherType == "Snowy") then
+				local FlatIdent_2CB11 = 0;
+				local snow;
+				while true do
+					if (FlatIdent_2CB11 == 3) then
+						snow.VelocitySpread = 45;
+						snow.Rotation = NumberRange.new(0, 360);
+						snow.RotSpeed = NumberRange.new(5);
+						snow.LightEmission = 0.5;
+						FlatIdent_2CB11 = 4;
+					end
+					if (FlatIdent_2CB11 == 2) then
+						snow.Transparency = NumberSequence.new(0.1);
+						snow.Lifetime = NumberRange.new(8);
+						snow.Rate = 80;
+						snow.Speed = NumberRange.new(5);
+						FlatIdent_2CB11 = 3;
+					end
+					if (FlatIdent_2CB11 == 1) then
+						snow.Name = "WeatherEffect";
+						snow.Parent = lighting;
+						snow.Texture = "rbxassetid://2530914826";
+						snow.Size = NumberSequence.new(0.3);
+						FlatIdent_2CB11 = 2;
+					end
+					if (FlatIdent_2CB11 == 4) then
+						snow.LightInfluence = 0;
+						break;
+					end
+					if (FlatIdent_2CB11 == 0) then
+						lighting.Brightness = 1.2;
+						lighting.FogEnd = 8000;
+						lighting.ExposureCompensation = 0.1;
+						snow = Instance.new("ParticleEmitter");
+						FlatIdent_2CB11 = 1;
+					end
+				end
+			end
+			Library:Notify({Title="天气切换",Content=("天气已切换至: " .. weatherType),Duration=2,Icon="cloud"});
+			break;
+		end
+		if (0 == FlatIdent_3423) then
+			lighting = game:GetService("Lighting");
+			for _, obj in pairs(lighting:GetChildren()) do
+				if (obj:IsA("ParticleEmitter") or (obj.Name == "WeatherEffect")) then
+					obj:Destroy();
+				end
+			end
+			FlatIdent_3423 = 1;
+		end
+		if (FlatIdent_3423 == 1) then
+			lighting.ClockTime = 14;
+			lighting.Brightness = 1;
+			FlatIdent_3423 = 2;
+		end
+		if (FlatIdent_3423 == 2) then
+			lighting.FogEnd = 10000;
+			lighting.GlobalShadows = true;
+			FlatIdent_3423 = 3;
+		end
+	end
+end
+WeatherBox:AddDropdown("选择天气", {Values={"雨天","阴天","晴天","雪天"},Default=3,Callback=function(Value)
+	selectedWeather = Value;
+end});
+WeatherBox:AddButton("确认变换天气", function()
+	changeWeather(weatherSettings[selectedWeather]);
+end);
+local SkyBoxBox = Tabs.Main:AddLeftGroupbox("天空盒控制");
+local skySettings = {["神青天空1"]="http://www.roblox.com/asset/?id=112666167201442",["神青天空2"]="http://www.roblox.com/asset/?id=105006817202266",["动漫猫羽雫天空"]="http://www.roblox.com/asset/?id=16060333448"};
+local selectedSky = "神青天空1";
+local function changeSky(skyboxId)
+	local lighting = game:GetService("Lighting");
+	for _, obj in pairs(lighting:GetChildren()) do
+		if obj:IsA("Sky") then
+			obj:Destroy();
+		end
+	end
+	local sky = Instance.new("Sky");
+	sky.CelestialBodiesShown = false;
+	sky.Parent = lighting;
+	sky.SkyboxUp = skyboxId;
+	sky.SkyboxBk = skyboxId;
+	sky.SkyboxDn = skyboxId;
+	sky.SkyboxRt = skyboxId;
+	sky.SkyboxLf = skyboxId;
+	sky.SkyboxFt = skyboxId;
+	Library:Notify({Title="天空盒切换",Content=("天空盒已切换至: " .. selectedSky),Duration=2,Icon="sun"});
+end
+SkyBoxBox:AddDropdown("选择天空盒", {Values={"神青天空1","神青天空2","动漫猫羽雫天空"},Default=1,Callback=function(Value)
+	selectedSky = Value;
+end});
+SkyBoxBox:AddButton("确认变换天空", function()
+	changeSky(skySettings[selectedSky]);
+end);
+local function cleanup()
+	if chatSystem.autoChatConnection then
+		local FlatIdent_AF23 = 0;
+		while true do
+			if (FlatIdent_AF23 == 0) then
+				chatSystem.autoChatConnection:Disconnect();
+				chatSystem.autoChatConnection = nil;
+				break;
+			end
+		end
+	end
+end
+game:GetService("CoreGui").ChildRemoved:Connect(function(child)
+	if child.Name:find("Obsidian") then
+		cleanup();
+	end
+end);
+ThemeManager:SetLibrary(Library);
+SaveManager:SetLibrary(Library);
+SaveManager:IgnoreThemeSettings();
+SaveManager:SetIgnoreIndexes({"MenuKeybind"});
+SaveManager:SetFolder("UniversalSilentAim/Configs");
+SaveManager:BuildConfigSection(Tabs["UI Settings"]);
+ThemeManager:ApplyToTab(Tabs["UI Settings"]);
+SaveManager:LoadAutoloadConfig();

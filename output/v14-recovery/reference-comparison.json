@@ -1,0 +1,10 @@
+{
+  "reference_file": "output-0023.lua",
+  "captured_prototypes": 55,
+  "captured_instructions": 9340,
+  "reference_simple_quoted_literals": 190,
+  "captured_string_values": 173,
+  "exact_literal_overlap": 9,
+  "behavior_equivalence_verified": false,
+  "comparison_limit": "Exact unescaped double-quoted literal overlap only; not a semantic equivalence test."
+}

@@ -1,0 +1,62 @@
+{
+  "bootstrap_executed": false,
+  "errors": [
+    "v14 sample-local lift: Luraph safe capture timed out after 300 seconds last capture output: [capture] reading recovered VM and bytecode [capture] compiling recovered VM (optimization level 2) [capture] running bytecode parser"
+  ],
+  "family": "Luraph",
+  "input_bytes": 252810,
+  "input_name": "levi.lua",
+  "input_sha256": "ec99ab9eaf6d81bbea9d6da4a2e73d40ba0edbafba91a0dfebf941f40bb14c47",
+  "loader_layout": {
+    "detected": true,
+    "layout": "two-stream-legacy",
+    "legacy_signature": true,
+    "long_strings": 2,
+    "raw_lph_streams": 2,
+    "single_stream_externalizable": null,
+    "valid_lph_streams": 2,
+    "zstd_streams": 0
+  },
+  "lph_literals_found": 2,
+  "protected_payload_executed": false,
+  "remote_service_used": false,
+  "source_equivalence_verified": false,
+  "source_lift": {
+    "payload_executed": false,
+    "reason": "Luraph safe capture timed out after 300 seconds last capture output: [capture] reading recovered VM and bytecode [capture] compiling recovered VM (optimization level 2) [capture] running bytecode parser",
+    "source_equivalence_verified": false,
+    "status": "incomplete"
+  },
+  "static_sections": [],
+  "static_streams": [
+    {
+      "artifact": "stream-01.bin",
+      "decoded_bytes": 20672,
+      "decoder": "legacy-lph-ascii85",
+      "encoded_characters": 25844,
+      "index": 1,
+      "kind": "decoded LPH stream; VM not devirtualized",
+      "sha256": "ec9a88e467f9e044ebd24456febec3345793af80617f860c8e31e1066c3dc903",
+      "source_offset": 901
+    },
+    {
+      "artifact": "stream-02.bin",
+      "decoded_bytes": 178732,
+      "decoder": "legacy-lph-ascii85",
+      "encoded_characters": 223419,
+      "index": 2,
+      "kind": "decoded LPH stream; VM not devirtualized",
+      "sha256": "951905b4b3a64ce606e352f9d75de3e98bc0da92f36120a5b49d824836fcf7a3",
+      "source_offset": 26755
+    }
+  ],
+  "static_unpack": {
+    "bytecode_bytes": 323909,
+    "bytecode_sha256": "637b221fc7ec120f0891169a052f51070d76f2432fc751c1b0603f732b309594",
+    "interpreter_bytes": 75013,
+    "interpreter_sha256": "6992ac6dd9132a1adb51819e83d816a5a9bbb4079e17d15c3b588313df9e248a",
+    "protected_payload_executed": false
+  },
+  "status": "static v14 VM unpack completed; sample-local source lifting did not complete",
+  "version": "14.7"
+}

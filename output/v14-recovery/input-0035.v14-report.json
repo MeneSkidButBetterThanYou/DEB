@@ -1,0 +1,150 @@
+{
+  "bootstrap_executed": false,
+  "environment_model": {
+    "http_url_constant_count": 2,
+    "metadata_only": true,
+    "model": "shared fake Roblox/executor environment used by the v15 harness",
+    "network_calls_performed": false,
+    "note": "The Roblox/executor name model is shared; v14 wrapper decoding, constant key context, and opcode semantics remain version-specific.",
+    "protected_code_executed": false,
+    "recognized_symbol_count": 48,
+    "recognized_symbols": {
+      "environment_globals": [
+        "Enum",
+        "Instance",
+        "Random",
+        "Workspace",
+        "_G",
+        "bit32",
+        "coroutine",
+        "elapsedTime",
+        "game",
+        "getmetatable",
+        "math",
+        "pairs",
+        "pcall",
+        "table",
+        "task",
+        "tonumber",
+        "tostring",
+        "type",
+        "typeof",
+        "vector",
+        "workspace",
+        "xpcall"
+      ],
+      "executor_apis": [
+        "getgc",
+        "gethwid",
+        "getinfo",
+        "getupvalue",
+        "identifyexecutor",
+        "loadstring"
+      ],
+      "roblox_api_members": [
+        "BrickColor",
+        "ClassName",
+        "Destroy",
+        "DisplayName",
+        "Enabled",
+        "GetService",
+        "Length",
+        "LocalPlayer",
+        "Name",
+        "Time",
+        "Value",
+        "Version",
+        "X",
+        "name"
+      ],
+      "roblox_classes": [
+        "Flag",
+        "FloatCurve",
+        "GuiService",
+        "Players",
+        "TextChatService",
+        "UserInputService"
+      ]
+    },
+    "runtime_shim_invoked": false,
+    "source_hashes": {
+      "envlog.luau": "80f924b98ba425be0a7b43a7024811fcb9fa02478d0f120e624d5db7ff5154d6",
+      "roblox_api.luau": "e514633bd294261c823396aefa77c5f249f1b63ad8963aec76744cb00c1f0f3e"
+    }
+  },
+  "errors": [],
+  "family": "Luraph",
+  "input_bytes": 126920,
+  "input_name": "input-0035.lua",
+  "input_sha256": "0c31040716a72a3458d4fb681f210894545478fb1f1bf30d41f12771331c3c5d",
+  "loader_layout": {
+    "detected": false,
+    "layout": "not-luraph",
+    "legacy_signature": false,
+    "long_strings": 5,
+    "raw_lph_streams": 0,
+    "single_stream_externalizable": null,
+    "valid_lph_streams": 0,
+    "zstd_streams": 0
+  },
+  "lph_literals_found": 0,
+  "protected_payload_executed": false,
+  "remote_service_used": false,
+  "source_equivalence_verified": false,
+  "static_sections": [
+    {
+      "artifact": "section-01.bin",
+      "constant_count": 157,
+      "constant_decode_errors": 0,
+      "constant_key_context_mode": "kl saturated at each record's seed-count bound",
+      "constant_record_count": 157,
+      "decoded_bytes": 37032,
+      "encoded_characters": 43130,
+      "index": 1,
+      "instruction_artifact": "section-01.instructions.json",
+      "instruction_count": 639,
+      "sha256": "a08324f6bf572ff2159cb29725b9d5f9bc70a3901681aeb696c8afd97c199852"
+    },
+    {
+      "artifact": "section-02.bin",
+      "constant_count": 11,
+      "constant_decode_errors": 0,
+      "constant_key_context_mode": "kl saturated at each record's seed-count bound",
+      "constant_record_count": 11,
+      "decoded_bytes": 4564,
+      "encoded_characters": 5399,
+      "index": 2,
+      "instruction_artifact": "section-02.instructions.json",
+      "instruction_count": 67,
+      "sha256": "7addb765497a72595c269d6c3f859453f8ecd6cbc6d00e596053eee9f7dd5d25"
+    },
+    {
+      "artifact": "section-03.bin",
+      "constant_count": 21,
+      "constant_decode_errors": 0,
+      "constant_key_context_mode": "kl saturated at each record's seed-count bound",
+      "constant_record_count": 21,
+      "decoded_bytes": 15361,
+      "encoded_characters": 18421,
+      "index": 3,
+      "instruction_artifact": "section-03.instructions.json",
+      "instruction_count": 394,
+      "sha256": "0f11fbb78b9bccf61e362b785b6c75bd87a8a146eceef9ad3af018b00e3960a6"
+    }
+  ],
+  "static_streams": [],
+  "static_unpack": {
+    "alphabet_characters": 91,
+    "declared_section_characters": [
+      43130,
+      5399,
+      18421
+    ],
+    "decoded_total_bytes": 56957,
+    "layout": "v14.7 tagged three-section wrapper",
+    "protected_payload_executed": false,
+    "tag": "qM7GWpGGxEqeK"
+  },
+  "status": "v14.7 sections, instruction records, and constants parsed statically; source lifting remains incomplete",
+  "version": "14.7"
+}

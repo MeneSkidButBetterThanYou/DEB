@@ -1,0 +1,16 @@
+-- Deobfuscated by deobf (dynamic trace)
+-- source: kaitun_levi.lua
+-- NOTE: reconstructed from observed behaviour; branches that were not taken
+--       during the trace are missing and conditions are only noted in comments.
+-- anti-tamper trap functions disabled: #28
+-- run status: script error: [string "Luraph"]:1: attempt to concatenate nil with nil
+--   C:/Users/User/Desktop/EGO/ravel0.7/Deobfuscator/BIGSAMPLE/Immortal/ImmortalOutput/kaitun_levi.deobf.luau.harness.luau:5371
+--   [string "Luraph"]:1
+--   [string "Luraph"]:1
+--   Script:3
+--   C:/Users/User/Desktop/EGO/ravel0.7/Deobfuscator/BIGSAMPLE/Immortal/ImmortalOutput/kaitun_levi.deobf.luau.harness.luau:5376
+--   
+-- 50 statements recorded in 2.54s
+
+-- loadstring() of 213005 bytes: "return setmetatable({[97]=coroutine.resume,YZ=function(W,H,L,M,y,R,f,_,i,v)if i<=427 then if i<=426 then local X=W[95](v,H+2);local W,v=not(X<128)and 345 or 201,_[1];return W,_[2],v,H,X;else local W,v"
+-- [deobf] removed 58 lines of the obfuscator's environment/anti-tamper probes
