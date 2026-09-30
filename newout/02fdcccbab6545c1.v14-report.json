@@ -1,0 +1,39 @@
+{
+  "bootstrap_executed": false,
+  "errors": [
+    "v14.7 static section decode: expected one length-framed three-section string; found 0"
+  ],
+  "family": "Luraph",
+  "input_bytes": 212940,
+  "input_name": "02fdcccbab6545c1.lua",
+  "input_sha256": "7534f40cb6c494f461c7a92ca6d7812c67e392185463fdf631218ba651ce8a29",
+  "loader_layout": {
+    "detected": false,
+    "layout": "unsupported-lph",
+    "legacy_signature": false,
+    "long_strings": 1,
+    "raw_lph_streams": 1,
+    "single_stream_externalizable": null,
+    "valid_lph_streams": 1,
+    "zstd_streams": 0
+  },
+  "lph_literals_found": 1,
+  "protected_payload_executed": false,
+  "remote_service_used": false,
+  "source_equivalence_verified": false,
+  "static_sections": [],
+  "static_streams": [
+    {
+      "artifact": "stream-01.bin",
+      "decoded_bytes": 129524,
+      "decoder": "legacy-lph-ascii85",
+      "encoded_characters": 161349,
+      "index": 1,
+      "kind": "decoded LPH stream; VM not devirtualized",
+      "sha256": "fffb6f37e58861b3ca4a57c9ec4f2bbf2ac50c99238caa409a3b47df58350f8e",
+      "source_offset": 35917
+    }
+  ],
+  "status": "LPH Base85 stream decoded statically; compressed VM schema and source remain unsupported",
+  "version": "14.7"
+}

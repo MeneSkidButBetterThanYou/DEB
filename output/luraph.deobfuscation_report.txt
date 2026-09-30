@@ -1,0 +1,17 @@
+Deobfuscator v0.3.4 - Current Run Report
+===========================================
+
+Input: C:\Users\User\Desktop\EGO\Deobfuscator\luraph.lua
+Output: C:\Users\User\Desktop\EGO\Deobfuscator\output\luraph.lua
+Status: Failed
+Recovered functions: not reported
+Unlifted blocks: not reported
+Backend exit code: 1
+
+Summary
+-------
+No current output was produced
+
+Run log
+-------
+
